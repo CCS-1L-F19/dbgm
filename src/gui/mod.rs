@@ -10,7 +10,7 @@ use self::popups::Modal;
 
 pub use self::utils::{Textures, ImageCache};
 
-pub const AUTO_SIZE: (f32, f32) = (0.0, 0.0);
+pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
 pub(crate) mod popups {
     use std::borrow::Cow;
@@ -112,13 +112,13 @@ struct BackgroundListEntry {
 }
 
 struct OriginalEntry {
-    texture: Option<ImTexture>,
+    texture: Option<TextureId>,
     location: String,
     changed: bool,
 }
 
 struct GuiResources {
-    missing_image: ImTexture,
+    missing_image: TextureId,
 }
 
 impl GuiResources {
@@ -156,11 +156,11 @@ impl<'a> GuiState<'a> {
             if !ui.is_popup_open(&id) { ui.open_popup(&id); }
             let mut new = None;
             let id_with_title = im_str!("{}###{}", modal.get_title(), id.to_str());
-            modal.open_with(PopupModal::new(ui, id_with_title)).build(|| new = modal.display(ui, self));
+            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| new = modal.display(ui, self));
             match &new {
-                Some(m) if im_str!("###{}", m.get_id()) != &id => {
+                Some(m) if im_str!("###{}", m.get_id()) != id => {
                     ui.close_current_popup();
-                    ui.open_popup(im_str!("###{}", m.get_id()));
+                    ui.open_popup(&im_str!("###{}", m.get_id()));
                 }
                 None => ui.close_current_popup(),
                 _ => {},
@@ -177,11 +177,11 @@ impl<'a> GuiState<'a> {
                 let name = set.name().unwrap_or("(unnamed set)");
                 let folder = set.image_folder().map(|f| f.to_string_lossy()).unwrap_or(Cow::from("(no image folder)"));
                 let text = im_str!("{} - {}", name, folder);
-                ui.pad_to_center(ui.calc_text_size(&text, false, -1.0).x);
+                ui.pad_to_center(ui.calc_text_size(&text, false, -1.0)[0]);
                 ui.text(&text);
                 ui.separator();
             }
-            let window_width = ui.get_content_region_max().0;
+            let window_width = ui.content_region_max()[0];
             ui.text(im_str!("Test!"));
             ui.columns(2, im_str!("MainColumns"), true);
             ui.set_column_offset(1, 2.0 * window_width / 3.0);
@@ -243,12 +243,12 @@ impl<'a> GuiState<'a> {
 
     fn render_background_list<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) {
         let entries = self.generate_background_entries(textures);
-        ui.child_frame(im_str!("background list"), AUTO_SIZE).build(|| {
+        ChildWindow::new(im_str!("background list")).build(ui, || {
             if let Some(set) = self.dbgm.background_set() {
                 for (i, bgs) in entries.into_iter().enumerate() {
                     if !bgs.is_empty() {
                         let source = &set.sources()[i];
-                        if ui.collapsing_header(im_str!("{}###Source{}", source.name(), i)).build() {
+                        if ui.collapsing_header(&im_str!("{}###Source{}", source.name(), i)).build() {
                             for (j, bg) in bgs.into_iter().enumerate() {
                                 self.render_background_entry(ui, (i, j), bg);
                             }
@@ -260,39 +260,39 @@ impl<'a> GuiState<'a> {
     }
 
     fn render_background_entry(&self, ui: &Ui, id: (usize, usize), background: BackgroundListEntry) {
-        ui.push_id(im_str!("Source{}Background{}", id.0, id.1));
-        ui.child_frame(im_str!("BackgroundFrame"), AUTO_SIZE).build(|| {
+        let entry_id = ui.push_id(&im_str!("Source{}Background{}", id.0, id.1));
+        let child = ChildWindow::new(im_str!("BackgroundFrame")).build(ui, || {
             ui.columns(2, im_str!("Columns"), false);
             let texture = background.original.and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
-            ui.image(texture, AUTO_SIZE).build()
+            Image::new(texture, AUTO_SIZE).build(ui);
         });
-        ui.pop_id();
+        entry_id.pop(ui);
     }
 
     fn render_menu_bar(&mut self, ui: &Ui) {
-        ui.menu(im_str!("File")).build(|| {
-            if ui.menu_item(im_str!("New background set...")).build() {
+        ui.menu(im_str!("File"), true, || {
+            if MenuItem::new(im_str!("New background set...")).build(ui) {
                 self.dbgm.open_background_set(BackgroundSet::new());
             }
-            if ui.menu_item(im_str!("Open background set...")).build() {
+            if MenuItem::new(im_str!("Open background set...")).build(ui) {
                 
             }
-            if ui.menu_item(im_str!("Edit set information...")).enabled(self.dbgm.background_set().is_some()).build() {
+            if MenuItem::new(im_str!("Edit set information...")).enabled(self.dbgm.background_set().is_some()).build(ui) {
                 self.open_modal(Modal::change_set_info())
             }
         });
     }
 
     fn in_window(ui: &Ui, contents: impl FnOnce()) {
-        ui.with_style_var(StyleVar::WindowRounding(0.0), || {
-            ui.window(im_str!("Desktop Background Manager"))
-            .position((0.0, 0.0), ImGuiCond::FirstUseEver)
-            .size(ui.imgui().display_size(), ImGuiCond::Always)
-            .flags(ImGuiWindowFlags::NoTitleBar | ImGuiWindowFlags::NoDecoration | ImGuiWindowFlags::NoMove | ImGuiWindowFlags::MenuBar)
-            .build(|| {
-                ui.with_style_var(StyleVar::WindowRounding(1.0), contents);
+        ui.push_style_var(StyleVar::WindowRounding(0.0));
+        Window::new(im_str!("Desktop Background Manager"))
+            .position([0.0, 0.0], Condition::FirstUseEver)
+            .size(ui.io().display_size, Condition::Always)
+            .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_DECORATION | WindowFlags::NO_MOVE | WindowFlags::MENU_BAR)
+            .build(ui, || {
+                ui.push_style_var(StyleVar::WindowRounding(1.0));
+                contents()
             });
-        })
     }
 }
 

@@ -4,11 +4,11 @@ use imgui::*;
 
 pub trait Textures {
     type CreationError: std::fmt::Debug;
-    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<ImTexture, Self::CreationError>;
+    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<TextureId, Self::CreationError>;
 }
 
 pub struct ImageCache<K: Hash + Eq> {
-    images: HashMap<K, (image::DynamicImage, Option<ImTexture>)>,
+    images: HashMap<K, (image::DynamicImage, Option<TextureId>)>,
 }
 
 impl<K: Hash + Eq> ImageCache<K> {
@@ -24,7 +24,7 @@ impl<K: Hash + Eq> ImageCache<K> {
         self.images.insert(key, (image, None));
     }
 
-    pub fn remove_image(&mut self, key: &K) -> Option<(image::DynamicImage, Option<ImTexture>)> {
+    pub fn remove_image(&mut self, key: &K) -> Option<(image::DynamicImage, Option<TextureId>)> {
         self.images.remove(key)
     }
 
@@ -32,7 +32,7 @@ impl<K: Hash + Eq> ImageCache<K> {
         self.images.get(key).map(|(i, _)| i)
     }
 
-    pub fn load_texture<T: Textures + ?Sized>(&mut self, key: &K, textures: &mut T) -> Option<Result<ImTexture, T::CreationError>> {
+    pub fn load_texture<T: Textures + ?Sized>(&mut self, key: &K, textures: &mut T) -> Option<Result<TextureId, T::CreationError>> {
         match self.images.get_mut(key) {
             Some((image, Some(texture))) => Some(Ok(*texture)),
             Some((image, texture_slot)) => {
@@ -63,37 +63,6 @@ impl<'ui> UiExt for Ui<'ui> {
 
     fn is_popup_open(&self, popup: &ImStr) -> bool {
         unsafe { imgui::sys::igIsPopupOpen(popup.as_ptr()) }
-    }
-}
-
-pub struct ListClipper(sys::ImGuiListClipper);
-
-impl ListClipper {
-    pub fn new(count: u32, item_height: Option<f32>) -> ListClipper {
-        let mut inner = sys::ImGuiListClipper { // Dummy values, will be overwritten in next call.
-            start_pos_y: 0.0,
-            items_height: 0.0,
-            items_count: 0,
-            step_no: 0,
-            display_start: 0,
-            display_end: 0,
-        };
-        unsafe { 
-            sys::ImGuiListClipper_Begin(
-                &mut inner as *mut _, 
-                if count > std::i32::MAX as u32 { std::i32::MAX } else { count as i32 },
-                item_height.unwrap_or(-1.0),
-            ) 
-        }
-        ListClipper(inner)
-    }
-
-    pub fn step(&mut self) -> bool {
-        unsafe { sys::ImGuiListClipper_Step(&mut self.0 as *mut _) }
-    }
-
-    pub fn display_items(&self) -> impl Iterator<Item=usize> {
-        self.0.display_start as usize .. self.0.display_end as usize
     }
 }
 

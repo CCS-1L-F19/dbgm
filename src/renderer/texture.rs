@@ -1,5 +1,5 @@
 use image::*;
-use imgui::ImTexture;
+use imgui::TextureId;
 use gfx::{format, texture as tex, Factory as _};
 use gfx_device_gl::{Resources, Factory};
 use crate::gui::Textures;
@@ -13,7 +13,7 @@ pub struct GfxGlTextures<'a> {
 
 impl<'a> Textures for GfxGlTextures<'a> {
     type CreationError = gfx::CombinedError;
-    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<ImTexture, gfx::CombinedError> {
+    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<TextureId, gfx::CombinedError> {
         let (width, height) = image.dimensions();
         
         let (_, srv) = self.factory.create_texture_immutable_u8::<ColorFormat>(
@@ -30,7 +30,7 @@ impl<'a> Textures for GfxGlTextures<'a> {
     }
 
     /*
-    pub fn create_texture(&mut self, image: image::DynamicImage) -> Result<ImTexture, TextureCreationError> {
+    pub fn create_texture(&mut self, image: image::DynamicImage) -> Result<TextureId, TextureCreationError> {
         use tex::*;
 
         let size = (image.width() as u16, image.height() as u16);
