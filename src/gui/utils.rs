@@ -51,14 +51,12 @@ impl<K: Hash + Eq> ImageCache<K> {
 pub trait UiExt {
     fn pad_to_center(&self, width: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
-    // fn list_box_header(&self, label: &ImStr, count: i32, height_in_items: i32) -> bool;
-    // fn list_box_footer(&self);
 }
 
 impl<'ui> UiExt for Ui<'ui> {
     fn pad_to_center(&self, width: f32) {
-        let cpos = self.get_cursor_pos();
-        self.set_cursor_pos((cpos.0 + (self.get_content_region_max().0 - width) / 2.0, cpos.1));
+        let cpos = self.cursor_pos();
+        self.set_cursor_pos([cpos[0] + (self.content_region_max()[0] - width) / 2.0, cpos[1]]);
     }
 
     fn is_popup_open(&self, popup: &ImStr) -> bool {
