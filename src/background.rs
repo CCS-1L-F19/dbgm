@@ -15,7 +15,7 @@ pub struct DesktopBackground {
 
 pub struct BackgroundSet {
     image_folder: Option<PathBuf>,
-    sources: Vec<Box<ErasedDesktopBackgroundSource>>,
+    sources: Vec<Box<dyn ErasedDesktopBackgroundSource>>,
     name: Option<String>,
     backgrounds: Vec<DesktopBackground>,
 }
@@ -46,11 +46,11 @@ impl BackgroundSet {
         self.name = Some(name.as_ref().to_owned());
     }
 
-    pub fn sources(&self) -> &Vec<Box<ErasedDesktopBackgroundSource>> {
+    pub fn sources(&self) -> &Vec<Box<dyn ErasedDesktopBackgroundSource>> {
         &self.sources
     }
 
-    pub fn sources_mut(&mut self) -> &mut Vec<Box<ErasedDesktopBackgroundSource>> {
+    pub fn sources_mut(&mut self) -> &mut Vec<Box<dyn ErasedDesktopBackgroundSource>> {
         &mut self.sources
     }
 

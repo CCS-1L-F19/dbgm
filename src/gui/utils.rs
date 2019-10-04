@@ -34,7 +34,7 @@ impl<K: Hash + Eq> ImageCache<K> {
 
     pub fn load_texture<T: Textures + ?Sized>(&mut self, key: &K, textures: &mut T) -> Option<Result<TextureId, T::CreationError>> {
         match self.images.get_mut(key) {
-            Some((image, Some(texture))) => Some(Ok(*texture)),
+            Some((_, Some(texture))) => Some(Ok(*texture)),
             Some((image, texture_slot)) => {
                 let texture = match textures.create_texture(image) {
                     Ok(texture) => texture,
@@ -62,11 +62,4 @@ impl<'ui> UiExt for Ui<'ui> {
     fn is_popup_open(&self, popup: &ImStr) -> bool {
         unsafe { imgui::sys::igIsPopupOpen(popup.as_ptr()) }
     }
-}
-
-macro_rules! load_internal_texture {
-    {$textures:ident, $path:tt} => { {
-        let image = image::load_from_memory(include_bytes!($path)).expect("Failed to load internal texture!");
-        $textures.create_texture(&image).expect("Failed to create internal texture!")
-    } }
 }
