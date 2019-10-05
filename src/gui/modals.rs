@@ -14,9 +14,9 @@ pub enum Modal {
         image_folder: Option<PathBuf>,
         name_buf: ImString,
     },
-    AddSource {
+    AddFileSource {
 
-    }
+    },
 }
 
 impl Modal {
@@ -24,7 +24,7 @@ impl Modal {
         match self {
             Error(..) => "error",
             ChangeSetInfo { .. } => "changesetinfo",
-            AddSource { } => "addsource"
+            AddFileSource { .. } => "addfilesource",
         }
     }
 
@@ -32,7 +32,6 @@ impl Modal {
         match self {
             Error(..) => "Error",
             ChangeSetInfo { .. } => "Background set information",
-            AddSource { } => { "Add source..." }
         }
     }
 
@@ -79,9 +78,6 @@ impl Modal {
                 ui.same_line(0.0);
                 if ui.button(im_str!("Cancel"), AUTO_SIZE) { return None }
             }
-            AddSource { }=> {
-
-            }
         }
         return Some(self)
     }
@@ -96,9 +92,7 @@ impl Modal {
         ChangeSetInfo { image_folder: None, name_buf: ImString::new("") } // TODO: Add proper resizing support
     }
 
-    pub fn add_source() -> Modal {
-        AddSource {
-
-        }
+    pub fn add_file_source() -> Modal {
+        AddFileSource { }
     }
 }

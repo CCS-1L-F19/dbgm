@@ -25,5 +25,6 @@ macro_rules! gui_resources {
 }
 
 gui_resources! {
-    missing_image: "../resources/missing.png"
+    missing_image: "../resources/missing.png",
+    blue_plus: "../resources/blue_plus.png"
 }
