@@ -85,16 +85,6 @@ impl<'a> GuiState<'a> {
         })
     }
 
-    fn draw_background_entry(&self, ui: &Ui, id: (usize, usize), background: BackgroundListEntry) {
-        let entry_id = ui.push_id(&im_str!("Source{}Background{}", id.0, id.1));
-        ChildWindow::new(im_str!("BackgroundFrame")).build(ui, || {
-            ui.columns(2, im_str!("Columns"), false);
-            let texture = background.original.and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
-            Image::new(texture, AUTO_SIZE).build(ui);
-        });
-        entry_id.pop(ui);
-    }
-
     fn draw_list_header(&mut self, ui: &Ui) {
         let style = ui.clone_style();
         let header_text = im_str!("Background sources");
@@ -129,7 +119,7 @@ impl<'a> GuiState<'a> {
                 ui.popup(im_str!("AddSource"), || {
                     if Selectable::new(im_str!("From folder...")).build(ui) {
                         ui.close_current_popup();
-                        self.open_modal(Modal::add_file_source());
+                        // self.open_modal(Modal::add_file_source());
                     }
                 });
                 bcol.pop(ui);
@@ -137,5 +127,15 @@ impl<'a> GuiState<'a> {
         // If the above ChildWindow was offscreen, these haven't been popped yet.
         bgcolor.map(|t| t.pop(ui)); 
         padding.map(|t| t.pop(ui));
+    }
+
+    fn draw_background_entry(&self, ui: &Ui, id: (usize, usize), background: BackgroundListEntry) {
+        let entry_id = ui.push_id(&im_str!("Source{}Background{}", id.0, id.1));
+        ChildWindow::new(im_str!("BackgroundFrame")).build(ui, || {
+            ui.columns(2, im_str!("Columns"), false);
+            let texture = background.original.and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
+            Image::new(texture, AUTO_SIZE).build(ui);
+        });
+        entry_id.pop(ui);
     }
 }

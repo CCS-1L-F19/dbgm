@@ -8,7 +8,7 @@ mod modals;
 mod utils;
 
 use self::utils::*;
-use self::modals::Modal;
+use self::modals::{Modal, ModalInterface};
 use self::resources::GuiResources;
 
 pub use self::utils::{Textures, ImageCache};
@@ -38,15 +38,15 @@ impl<'a> GuiState<'a> {
 
     fn check_modal(&mut self, ui: &Ui) {
         if let Some(modal) = self.modal.take() {
-            let id = im_str!("###{}", modal.get_id()).to_owned();
+            let id = im_str!("###{}", modal.id()).to_owned();
             if !ui.is_popup_open(&id) { ui.open_popup(&id); }
             let mut new = None;
-            let id_with_title = im_str!("{}###{}", modal.get_title(), id.to_str());
+            let id_with_title = im_str!("{}###{}", modal.title(), id.to_str());
             modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| new = modal.display(ui, self));
             match &new {
-                Some(m) if im_str!("###{}", m.get_id()) != id => {
+                Some(m) if im_str!("###{}", m.id()) != id => {
                     ui.close_current_popup();
-                    ui.open_popup(&im_str!("###{}", m.get_id()));
+                    ui.open_popup(&im_str!("###{}", m.id()));
                 }
                 None => ui.close_current_popup(),
                 _ => {},

@@ -100,26 +100,3 @@ impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S
 
     fn reload(&mut self) { self.reload() }
 }
-
-/*
-pub struct FileSource;
-
-pub struct OriginalFile;
-impl Original for OriginalFile {
-    fn read_image(&self) -> image::ImageResult<image::DynamicImage> { unimplemented!() }
-    fn display(&self) -> String { unimplemented!() }
-}
-
-impl<'a> DesktopBackgroundSource<'a> for FileSource {
-    type Key = ();
-    type Original = OriginalFile;
-    type KeyIter = std::vec::IntoIter<()>;
-    fn keys(&'a self) -> Self::KeyIter { unimplemented!() }
-    fn original(&self, key: Self::Key) -> OriginalResult<&Self::Original> { unimplemented!() }
-    fn reload(&mut self) { }
-}
-
-pub struct A<T: ErasedDesktopBackgroundSource>(std::marker::PhantomData<T>);
-
-pub struct B(A<FileSource>);
-*/
