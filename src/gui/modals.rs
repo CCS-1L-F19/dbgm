@@ -2,12 +2,14 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 use std::path::PathBuf;
 
+use enum_dispatch::*;
+
 use imgui::*;
 
-use crate::{OptionExt as _};
-use super::{AUTO_SIZE, GuiState};
-use self::Modal::*;
-use enum_dispatch::*;
+use crate::{OptionExt as _, };
+use crate::gui::{AUTO_SIZE, GuiState};
+use crate::gui::utils::{self, UiExt as _};
+use crate::sources;
 
 #[enum_dispatch]
 pub trait ModalInterface {
@@ -35,11 +37,11 @@ impl Modal {
     }
 
     pub fn change_set_info() -> Modal {
-        Modal::from(ChangeSetInfo { image_folder: None, name_buf: ImString::new("") }) // TODO: Add proper resizing support
+        Modal::from(ChangeSetInfo { image_folder: None, name_buf: ImString::new("") })
     }
 
     pub fn add_folder_source() -> Modal {
-        Modal::from(AddFolderSource { })
+        Modal::from(AddFolderSource { folder: None, name_buf: ImString::new("") })
     }
 }
 
@@ -70,14 +72,9 @@ impl ModalInterface for ChangeSetInfo {
         ui.input_text(im_str!("Image folder"), &mut ImString::new(display_folder)).read_only(true).build();
         ui.same_line(0.0);
         if ui.button(im_str!("Choose..."), AUTO_SIZE) {
-            match nfd::open_pick_folder(None) {
-                Ok(nfd::Response::Okay(f)) => {
-                    match f.parse() {
-                        Ok(path) => self.image_folder = Some(path),
-                        Err(e) => return Some(Modal::error("Invalid path to image folder.".to_string(), Some(e))),
-                    }
-                }
-                Err(e) => return Some(Modal::error("Could not open image folder picker.".to_string(), Some(e))),
+            match utils::choose_folder("image folder") {
+                Ok(Some(path)) => self.image_folder = Some(path),
+                Err(modal) => return Some(modal),
                 _ => {},
             }
         }
@@ -94,11 +91,33 @@ impl ModalInterface for ChangeSetInfo {
     }
 }
 
-pub struct AddFolderSource { }
+pub struct AddFolderSource { folder: Option<PathBuf>, name_buf: ImString }
 impl ModalInterface for AddFolderSource {
     fn id(&self) -> &str { "addfoldersource" }
     fn title(&self) -> &str { "Add source from folder..." }
-    fn display(self, ui: &Ui, state: &mut GuiState) -> Option<Modal> {
+    fn display(mut self, ui: &Ui, state: &mut GuiState) -> Option<Modal> {
+        let set = state.dbgm.background_set_mut().expect("Cannot add a source when no background set is open!");
 
+        let display_folder = self.folder.deref().or(set.image_folder()).map(|f| f.to_string_lossy()).unwrap_or(Cow::from("(none)"));
+        ui.input_text(im_str!("Source folder"), &mut ImString::new(display_folder)).read_only(true).build();
+        ui.same_line(0.0);
+        if ui.button(im_str!("Choose..."), AUTO_SIZE) {
+            match utils::choose_folder("source folder") {
+                Ok(Some(path)) => self.folder = Some(path),
+                Err(modal) => return Some(modal),
+                _ => {},
+            }
+        }
+
+        ui.input_text(im_str!("Source name"), &mut self.name_buf).flags(imgui::ImGuiInputTextFlags::CallbackResize).build();
+
+        let is_ok = self.folder.is_some() && self.name_buf.to_str().trim().len() > 0;
+        if ui.button_hack(im_str!("OK"), AUTO_SIZE, is_ok) {
+            set.add_source(sources::FolderSource::new(self.folder.unwrap(), self.name_buf.to_str()));
+            return None
+        }
+        ui.same_line(0.0);
+        if ui.button(im_str!("Cancel"), AUTO_SIZE) { return None }
+        Some(Modal::from(self))
     }
 }

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use imgui::*;
-use crate::{app::DBGM, background::*, source::OriginalKey};
+use crate::{app::DBGM, background::*, sources::OriginalKey};
 
 mod bglist;
 mod resources;
@@ -12,8 +12,6 @@ use self::modals::{Modal, ModalInterface};
 use self::resources::GuiResources;
 
 pub use self::utils::{Textures, ImageCache};
-
-pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,

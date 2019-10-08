@@ -1,8 +1,8 @@
 use winapi::Interface;
 use winapi::um::shobjidl_core::{IDesktopWallpaper, CLSID_DesktopWallpaper};
 use winapi::um::combaseapi;
-use super::check_result;
-use crate::*;
+
+use crate::{check_result, background::*};
 
 pub enum CurrentDesktopBackground {
     ImageFolder,

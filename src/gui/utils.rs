@@ -1,6 +1,12 @@
-use std::hash::Hash;
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::path::PathBuf;
+
 use imgui::*;
+
+use super::modals::Modal;
+
+pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
 pub trait Textures {
     type CreationError: std::fmt::Debug;
@@ -51,6 +57,7 @@ impl<K: Hash + Eq> ImageCache<K> {
 pub trait UiExt {
     fn pad_to_center(&self, width: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
+    fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool;
 }
 
 impl<'ui> UiExt for Ui<'ui> {
@@ -61,5 +68,34 @@ impl<'ui> UiExt for Ui<'ui> {
 
     fn is_popup_open(&self, popup: &ImStr) -> bool {
         unsafe { imgui::sys::igIsPopupOpen(popup.as_ptr()) }
+    }
+
+    // TODO: Replace this when ImGui supports proper disabled widgets.
+    fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool {
+        match enabled {
+            true => self.button(label, size),
+            false => {
+                let style = self.push_style_var(StyleVar::Alpha(self.clone_style().alpha * 0.5));
+                let colors = self.push_style_colors(&[
+                    (StyleColor::ButtonActive, self.style_color(StyleColor::Button)),
+                    (StyleColor::ButtonHovered, self.style_color(StyleColor::Button)),
+                ]);
+                self.button(label, size);
+                style.pop(self);
+                colors.pop(self);
+                false
+            }
+        }
+    }
+}
+
+pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, Modal> {
+    match nfd::open_pick_folder(None) {
+        Ok(nfd::Response::Okay(f)) => match f.parse() {
+            Ok(path) => Ok(Some(path)),
+            Err(e) => return Err(Modal::error(format!("Invalid path to {}.", desc), Some(e))),
+        }
+        Err(e) => return Err(Modal::error(format!("Could not open {} picker.", desc), Some(e))),
+        _ => Ok(None),
     }
 }

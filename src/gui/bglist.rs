@@ -17,7 +17,7 @@ struct OriginalEntry {
 
 impl<'a> GuiState<'a> {
     fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<BackgroundListEntry>> {
-        use crate::source::OriginalResult;
+        use crate::sources::OriginalResult;
         match self.dbgm.background_set() {
             Some(set) => {
                 let mut entries = (0..set.sources().len()).map(|_| Vec::new()).collect::<Vec<_>>();
@@ -119,7 +119,7 @@ impl<'a> GuiState<'a> {
                 ui.popup(im_str!("AddSource"), || {
                     if Selectable::new(im_str!("From folder...")).build(ui) {
                         ui.close_current_popup();
-                        // self.open_modal(Modal::add_file_source());
+                        self.open_modal(Modal::add_folder_source());
                     }
                 });
                 bcol.pop(ui);

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use image::{self, ImageResult, DynamicImage};
-use crate::*;
+use crate::{OptionExt as _, sources::*};
 
 #[derive(Clone)]
 pub struct DesktopBackground {

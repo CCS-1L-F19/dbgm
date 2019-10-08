@@ -6,11 +6,8 @@ use winapi::um::{objbase, combaseapi, winnt};
 mod renderer;
 mod app;
 mod background;
-mod source;
+mod sources;
 mod gui;
-
-pub use background::{Original, BackgroundSet, DesktopBackground};
-pub use source::*;
 
 use app::DBGM;
 
