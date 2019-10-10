@@ -1,11 +1,12 @@
 use super::*;
+use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
 
 pub trait ErasedDesktopBackgroundSource {
     fn name(&self) -> &str;
     // fn keys<'a>(&'a self) -> Box<dyn Iterator<Item=OriginalKey> + 'a>;
     fn original(&self, id: &OriginalKey) -> OriginalResult<&dyn Original>;
-    fn reload(&mut self);
+    fn reload(&mut self) -> Vec<OriginalChange<OriginalKey, Box<dyn Debug>>>;
 }
 
 #[derive(Clone)]
@@ -66,5 +67,15 @@ impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S
             .unwrap_or(OriginalResult::WrongSource)
     }
 
-    fn reload(&mut self) { self.reload() }
+    fn reload(&mut self) -> Vec<OriginalChange<OriginalKey, Box<dyn Debug>>> {
+        self.reload().into_iter().map(|c| OriginalChange {
+            key: OriginalKey::new::<S>(c.key),
+            kind: match c.kind {
+                ChangeKind::New => ChangeKind::New,
+                ChangeKind::Deleted => ChangeKind::Deleted,
+                ChangeKind::Altered => ChangeKind::Altered,
+                ChangeKind::Unavailable(e) => ChangeKind::Unavailable(Box::new(e) as Box<dyn Debug>),
+            }
+        }).collect()
+    }
 }

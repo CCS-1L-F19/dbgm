@@ -1,4 +1,6 @@
 use std::path::PathBuf;
+use std::io::ErrorKind;
+use std::fs::{self, File};
 use image::{ImageResult, DynamicImage};
 
 use super::*;
@@ -16,6 +18,28 @@ impl FolderSource {
             name: name.to_owned(),
             originals: Vec::new(),
         }
+    }
+}
+
+impl<'a> DesktopBackgroundSource<'a> for FolderSource {
+    type Key = FolderKey;
+    type Error = std::io::Error;
+    type Original = FolderSourceOriginal;
+    // type KeyIter = !;
+    fn name(&self) -> &str { &self.name }
+    // fn keys(&'a self) -> Self::KeyIter { unimplemented!() }
+    fn original(&self, key: &Self::Key) -> OriginalResult<&Self::Original> {
+        match self.originals.get(key.original_id) {
+            Some(original) => match !original.mismatch && original.hash == key.hash {
+                true => OriginalResult::Original(original),
+                false => OriginalResult::ContentMismatch(original),
+            },
+            None => OriginalResult::NotFound // TODO: Distinguish between this and WrongSource?
+        }
+    }
+
+    fn reload(&mut self) -> Vec<OriginalChange<FolderKey, std::io::Error>> {
+        Vec::new()
     }
 }
 
@@ -38,26 +62,5 @@ impl Original for FolderSourceOriginal {
 
     fn location(&self) -> String {
         self.path.to_string_lossy().to_owned().to_string()
-    }
-}
-
-impl<'a> DesktopBackgroundSource<'a> for FolderSource {
-    type Key = FolderKey;
-    type Original = FolderSourceOriginal;
-    // type KeyIter = !;
-    fn name(&self) -> &str { &self.name }
-    // fn keys(&'a self) -> Self::KeyIter { unimplemented!() }
-    fn original(&self, key: &Self::Key) -> OriginalResult<&Self::Original> {
-        match self.originals.get(key.original_id) {
-            Some(original) => match !original.mismatch && original.hash == key.hash {
-                true => OriginalResult::Original(original),
-                false => OriginalResult::ContentMismatch(original),
-            },
-            None => OriginalResult::NotFound // TODO: Distinguish between this and WrongSource?
-        }
-    }
-
-    fn reload(&mut self) {
-        
     }
 }

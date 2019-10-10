@@ -113,7 +113,9 @@ impl ModalInterface for AddFolderSource {
 
         let is_ok = self.folder.is_some() && self.name_buf.to_str().trim().len() > 0;
         if ui.button_hack(im_str!("OK"), AUTO_SIZE, is_ok) {
-            set.add_source(sources::FolderSource::new(self.folder.unwrap(), self.name_buf.to_str()));
+            let new_source = sources::FolderSource::new(self.folder.unwrap(), self.name_buf.to_str());
+            let source_id = set.add_source(new_source);
+            let changes = set.sources_mut()[source_id].reload();
             return None
         }
         ui.same_line(0.0);
