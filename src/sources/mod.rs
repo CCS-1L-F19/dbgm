@@ -39,7 +39,7 @@ pub trait DesktopBackgroundSource<'a> {
     fn reload(&mut self) -> Vec<OriginalChange<Self::Key, Self::Error>>;
 }
 
-pub struct OriginalChange<K, E> {
+pub struct OriginalChange<K = OriginalKey, E = Box<dyn Debug>> {
     pub key: K,
     pub kind: ChangeKind<E>,
 }

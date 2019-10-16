@@ -13,6 +13,16 @@ pub struct DesktopBackground {
     pub comments: Vec<String>,
 }
 
+impl DesktopBackground {
+    pub fn from_original(original: &dyn Original) -> DesktopBackground {
+        unimplemented!()
+    }
+
+    pub fn update_from(&mut self, original: &dyn Original) -> DesktopBackground {
+        unimplemented!()
+    }
+}
+
 pub struct BackgroundSet {
     image_folder: Option<PathBuf>,
     sources: Vec<Box<dyn ErasedDesktopBackgroundSource>>,
@@ -56,15 +66,15 @@ impl BackgroundSet {
 
     pub fn add_source<S: for<'a> DesktopBackgroundSource<'a> + 'static>(&mut self, source: S) -> usize {
         self.sources.push(Box::new(source));
-        return self.sources.len()
+        self.sources.len() - 1
     }
 
-    pub fn backgrounds(&self) -> impl Iterator<Item=&DesktopBackground> {
-        self.backgrounds.iter()
+    pub fn backgrounds(&self) -> &Vec<DesktopBackground> {
+        &self.backgrounds
     }
 
-    pub fn backgrounds_mut(&mut self) -> impl Iterator<Item=&mut DesktopBackground> {
-        self.backgrounds.iter_mut()
+    pub fn backgrounds_mut(&mut self) -> &mut Vec<DesktopBackground> {
+        &mut self.backgrounds
     }
 }
 

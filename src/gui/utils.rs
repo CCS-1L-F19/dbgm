@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use imgui::*;
 
-use super::modals::Modal;
+use super::modals::ErrorModal;
 
 pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
@@ -58,6 +58,7 @@ pub trait UiExt {
     fn pad_to_center(&self, width: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
     fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool;
+    fn toggle_button(&self, id: &ImStr, text_on: &str, text_off: &str, value: &mut bool);
 }
 
 impl<'ui> UiExt for Ui<'ui> {
@@ -87,15 +88,22 @@ impl<'ui> UiExt for Ui<'ui> {
             }
         }
     }
+
+    fn toggle_button(&self, id: &ImStr, text_on: &str, text_off: &str, value: &mut bool) {
+        let label = if *value { text_on } else { text_off };
+        if self.button(&im_str!("{}###{}", label, id), AUTO_SIZE) {
+            *value = !*value;
+        }
+    }
 }
 
-pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, Modal> {
+pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
     match nfd::open_pick_folder(None) {
         Ok(nfd::Response::Okay(f)) => match f.parse() {
             Ok(path) => Ok(Some(path)),
-            Err(e) => return Err(Modal::error(format!("Invalid path to {}.", desc), Some(e))),
+            Err(e) => return Err(ErrorModal::new(format!("Invalid path to {}.", desc), Some(e))),
         }
-        Err(e) => return Err(Modal::error(format!("Could not open {} picker.", desc), Some(e))),
+        Err(e) => return Err(ErrorModal::new(format!("Could not open {} picker.", desc), Some(e))),
         _ => Ok(None),
     }
 }

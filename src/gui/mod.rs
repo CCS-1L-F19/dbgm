@@ -1,6 +1,10 @@
 use std::borrow::Cow;
+
 use imgui::*;
-use crate::{app::DBGM, background::*, sources::OriginalKey};
+
+use crate::app::DBGM;
+use crate::background::*;
+use crate::sources::{DesktopBackgroundSource, OriginalKey, ChangeKind};
 
 mod bglist;
 mod resources;
@@ -8,7 +12,7 @@ mod modals;
 mod utils;
 
 use self::utils::*;
-use self::modals::{Modal, ModalInterface};
+use self::modals::{Modal, ModalInterface, ChangeSetInfo};
 use self::resources::GuiResources;
 
 pub use self::utils::{Textures, ImageCache};
@@ -30,18 +34,17 @@ impl<'a> GuiState<'a> {
         }
     }
 
-    fn open_modal(&mut self, modal: Modal) {
-        self.modal = Some(modal);
+    fn open_modal(&mut self, modal: impl Into<Modal>) {
+        self.modal = Some(modal.into());
     }
 
     fn check_modal(&mut self, ui: &Ui) {
         if let Some(modal) = self.modal.take() {
             let id = im_str!("###{}", modal.id()).to_owned();
             if !ui.is_popup_open(&id) { ui.open_popup(&id); }
-            let mut new = None;
             let id_with_title = im_str!("{}###{}", modal.title(), id.to_str());
-            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| new = modal.display(ui, self));
-            match &new {
+            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| modal.display(ui, self));
+            match &self.modal {
                 Some(m) if im_str!("###{}", m.id()) != id => {
                     ui.close_current_popup();
                     ui.open_popup(&im_str!("###{}", m.id()));
@@ -49,8 +52,21 @@ impl<'a> GuiState<'a> {
                 None => ui.close_current_popup(),
                 _ => {},
             }
-            self.modal = new;
         }
+    }
+
+    fn in_window(ui: &Ui, contents: impl FnOnce()) {
+        let wr = ui.push_style_var(StyleVar::WindowRounding(0.0));
+        Window::new(im_str!("Desktop Background Manager"))
+            .position([0.0, 0.0], Condition::FirstUseEver)
+            .size(ui.io().display_size, Condition::Always)
+            .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_DECORATION | WindowFlags::NO_MOVE | WindowFlags::MENU_BAR)
+            .build(ui, || {
+                let wr = ui.push_style_var(StyleVar::WindowRounding(1.0));
+                contents();
+                wr.pop(ui);
+            });
+        wr.pop(ui);
     }
 
     pub fn update<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) -> bool {
@@ -83,23 +99,18 @@ impl<'a> GuiState<'a> {
                 
             }
             if MenuItem::new(im_str!("Edit set information...")).enabled(self.dbgm.background_set().is_some()).build(ui) {
-                self.open_modal(Modal::change_set_info())
+                self.open_modal(ChangeSetInfo::new())
             }
         });
     }
 
-    fn in_window(ui: &Ui, contents: impl FnOnce()) {
-        let wr = ui.push_style_var(StyleVar::WindowRounding(0.0));
-        Window::new(im_str!("Desktop Background Manager"))
-            .position([0.0, 0.0], Condition::FirstUseEver)
-            .size(ui.io().display_size, Condition::Always)
-            .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_DECORATION | WindowFlags::NO_MOVE | WindowFlags::MENU_BAR)
-            .build(ui, || {
-                let wr = ui.push_style_var(StyleVar::WindowRounding(1.0));
-                contents();
-                wr.pop(ui);
-            });
-        wr.pop(ui);
+    fn add_source<S: for<'s> DesktopBackgroundSource<'s> + 'static>(&mut self, source: S) {
+        use modals::confirm_changes::*;
+        let set = self.dbgm.background_set_mut().expect("Cannot add source when no background set is open!");
+        let id = set.add_source(source);
+        let result_cache = ResultCache::new();
+        result_cache.put(ChangeKind::New, ChangeResult::Accept, false);
+        ConfirmChanges::new(id, set.sources_mut()[id].reload(), result_cache).apply_many(self);
     }
 }
 

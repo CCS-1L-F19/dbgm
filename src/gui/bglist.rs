@@ -1,6 +1,6 @@
 use imgui::*;
 use super::{
-    GuiState, AUTO_SIZE, utils::Textures, modals::Modal
+    GuiState, AUTO_SIZE, utils::Textures, modals::AddFolderSource
 };
 
 struct BackgroundListEntry {
@@ -119,7 +119,7 @@ impl<'a> GuiState<'a> {
                 ui.popup(im_str!("AddSource"), || {
                     if Selectable::new(im_str!("From folder...")).build(ui) {
                         ui.close_current_popup();
-                        self.open_modal(Modal::add_folder_source());
+                        self.open_modal(AddFolderSource::new());
                     }
                 });
                 bcol.pop(ui);
