@@ -21,17 +21,17 @@ impl ModalInterface for ConfirmChanges {
     fn title(&self) -> &str { "Confirm changes" }
     fn display(mut self, ui: &Ui, state: &mut GuiState) {
         if let Some(change) = self.changes.pop() {
-            let result = match change.kind {
-                ChangeKind::New => self.display_new(ui, state, change.key),
-                ChangeKind::Altered => self.display_altered(ui, state, change.key),
-                ChangeKind::Deleted => self.display_deleted(ui, state, change.key),
-                ChangeKind::Unavailable(cause) => self.display_unavailable(ui, state, change.key, cause),
+            let result = match &change.kind {
+                ChangeKind::New => self.display_new(ui, state, &change.key),
+                ChangeKind::Altered => self.display_altered(ui, state, &change.key),
+                ChangeKind::Deleted => self.display_deleted(ui, state, &change.key),
+                ChangeKind::Unavailable(cause) => self.display_unavailable(ui, state, &change.key, &cause),
             };
 
             match result {
                 None => state.open_modal(self),
                 Some(result) => {
-                    self.result_cache.put(change.kind, result, true); // TODO: Allow remembering answers
+                    self.result_cache.put(&change.kind, result, true); // TODO: Allow remembering answers
                     self.changes.push(change);
                     self.apply_many(state);
                 }
@@ -48,7 +48,7 @@ impl ConfirmChanges {
     pub fn apply_many(mut self, state: &mut GuiState) {
         let set = state.dbgm.background_set_mut().expect("Cannot incorporate changes when no background set is open!");
         while let Some(change) = self.changes.pop() {
-            match self.result_cache.get(change.kind) {
+            match self.result_cache.get(&change.kind) {
                 None => {
                     self.changes.push(change);
                     state.open_modal(self);
@@ -60,25 +60,27 @@ impl ConfirmChanges {
     }
 
     fn apply_one(&mut self, set: &mut BackgroundSet, change: OriginalChange, result: ChangeResult) {
+        let key = change.key;
         match (change.kind, result) {
             (ChangeKind::New, ChangeResult::Accept) => {
-                let original = set.sources()[self.source].original(&change.key);
+                let original = set.sources[self.source].original(&key);
                 let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                set.backgrounds_mut().push(DesktopBackground::from_original(original))
+                set.backgrounds.push(DesktopBackground::from_original(original))
             },
-            (ChangeKind::Deleted, ChangeResult::Accept) => set.backgrounds_mut().retain(|b| b.original != change.key), // TODO: make this work with content mismatches
+            (ChangeKind::Deleted, ChangeResult::Accept) => set.backgrounds_mut().retain(|b| b.original != key), // TODO: make this work with content mismatches
             (ChangeKind::Altered, ChangeResult::Accept) => {
-                for background in set.backgrounds_mut().iter_mut().filter(|b| b.original == change.key) {
-                    let original = set.sources()[self.source].original(&change.key);
+                for background in set.backgrounds.iter_mut().filter(|b| b.original == key) {
+                    let original = set.sources[self.source].original(&key);
                     let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
                     background.update_from(original);
                 }
             }
             (ChangeKind::Unavailable(_), _) => { /* TODO */ },
+            _ => unimplemented!(),
         }
     }
 
-    fn display_altered(mut self, ui: &Ui, state: &mut GuiState, key: OriginalKey) -> Option<ChangeResult> {
+    fn display_altered(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
         ui.text("The content of the original associated with the following backgrounds has changed:");
         //TODO: Show backgrounds here
         ui.text("\
@@ -93,7 +95,7 @@ impl ConfirmChanges {
         None
     }
 
-    fn display_deleted(mut self, ui: &Ui, state: &mut GuiState, key: OriginalKey) -> Option<ChangeResult> {
+    fn display_deleted(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
         ui.text("The original associated with the following backgrounds no longer exists:");
         // TODO: Show backgrounds here
         ui.text("\
@@ -108,7 +110,7 @@ impl ConfirmChanges {
         None
     }
 
-    fn display_unavailable(mut self, ui: &Ui, state: &mut GuiState, key: OriginalKey, cause: Box<dyn Debug>) -> Option<ChangeResult> {
+    fn display_unavailable(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey, cause: &dyn Debug) -> Option<ChangeResult> {
         ui.text("\
             The original associated with the following backgrounds cannot be accessed. This condition may be temporary\
             or permanent. You will not be able to edit any of the backgrounds until the original becomes available again.
@@ -118,13 +120,13 @@ impl ConfirmChanges {
         ui.same_line(0.0);
         ui.toggle_button(&im_str!("ShowDetails"), "Hide Error Details", "Show Error Details", &mut self.show_error_details);
         if self.show_error_details {
-            let details = im_str!("{:#?}", cause);
+            let mut details = im_str!("{:#?}", cause);
             InputTextMultiline::new(ui, &im_str!("###Error Details"), &mut details, AUTO_SIZE).read_only(true).build();
         }
         None
     }
 
-    fn display_new(mut self, ui: &Ui, state: &mut GuiState, key: OriginalKey) -> Option<ChangeResult> {
+    fn display_new(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
         ui.text("A new background is available. Would you like to add it to the library?");
         //TODO: Show background here
 
@@ -135,6 +137,7 @@ impl ConfirmChanges {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum ChangeResult { Accept, Reject } 
 
 pub struct ResultCache {
@@ -149,7 +152,7 @@ impl ResultCache {
         ResultCache { new: None, altered: None, deleted: None, unavailable: None }
     }
 
-    fn select<E: std::fmt::Debug>(&mut self, kind: ChangeKind<E>) -> &mut Option<(ChangeResult, bool)> {
+    fn select<E: std::fmt::Debug>(&mut self, kind: &ChangeKind<E>) -> &mut Option<(ChangeResult, bool)> {
         match kind {
             ChangeKind::New => &mut self.new,
             ChangeKind::Altered => &mut self.altered,
@@ -158,7 +161,7 @@ impl ResultCache {
         }
     }
 
-    pub fn get<E: std::fmt::Debug>(&mut self, kind: ChangeKind<E>) -> Option<ChangeResult> {
+    pub fn get<E: std::fmt::Debug>(&mut self, kind: &ChangeKind<E>) -> Option<ChangeResult> {
         let loc = self.select(kind);
         match loc.take() {
             Some((result, true)) => { *loc = Some((result, true)); Some(result) }
@@ -167,7 +170,7 @@ impl ResultCache {
         }
     }
 
-    pub fn put<E: std::fmt::Debug>(&mut self, kind: ChangeKind<E>, result: ChangeResult, once: bool) {
+    pub fn put<E: std::fmt::Debug>(&mut self, kind: &ChangeKind<E>, result: ChangeResult, once: bool) {
         let loc = self.select(kind);
         if let None | Some((_, false)) = loc {
             *loc = Some((result, once));

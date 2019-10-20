@@ -37,7 +37,7 @@ pub struct ErrorModal { message: String, info: Option<Box<dyn Debug>>}
 impl ModalInterface for ErrorModal {
     fn id(&self) -> &str { "error" }
     fn title(&self) -> &str { "Error" }
-    fn display(mut self, ui: &Ui, state: &mut GuiState) {
+    fn display(self, ui: &Ui, state: &mut GuiState) {
         ui.text(im_str!("{} {}", self.message, self.info.as_ref().map(|e| format!("Details: {:?}", e)).unwrap_or("".to_string())));
         let ok_label = im_str!("OK");
         if ui.button(ok_label, AUTO_SIZE) { return }

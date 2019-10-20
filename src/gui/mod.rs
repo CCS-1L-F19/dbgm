@@ -108,8 +108,8 @@ impl<'a> GuiState<'a> {
         use modals::confirm_changes::*;
         let set = self.dbgm.background_set_mut().expect("Cannot add source when no background set is open!");
         let id = set.add_source(source);
-        let result_cache = ResultCache::new();
-        result_cache.put(ChangeKind::New, ChangeResult::Accept, false);
+        let mut result_cache = ResultCache::new();
+        result_cache.put::<()>(&ChangeKind::New, ChangeResult::Accept, false);
         ConfirmChanges::new(id, set.sources_mut()[id].reload(), result_cache).apply_many(self);
     }
 }

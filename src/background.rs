@@ -14,20 +14,20 @@ pub struct DesktopBackground {
 }
 
 impl DesktopBackground {
-    pub fn from_original(original: &dyn Original) -> DesktopBackground {
+    pub fn from_original(_original: &dyn Original) -> DesktopBackground {
         unimplemented!()
     }
 
-    pub fn update_from(&mut self, original: &dyn Original) -> DesktopBackground {
+    pub fn update_from(&mut self, _original: &dyn Original) -> DesktopBackground {
         unimplemented!()
     }
 }
 
 pub struct BackgroundSet {
     image_folder: Option<PathBuf>,
-    sources: Vec<Box<dyn ErasedDesktopBackgroundSource>>,
+    pub(crate) sources: Vec<Box<dyn ErasedDesktopBackgroundSource>>,
     name: Option<String>,
-    backgrounds: Vec<DesktopBackground>,
+    pub(crate) backgrounds: Vec<DesktopBackground>,
 }
 
 impl BackgroundSet {
