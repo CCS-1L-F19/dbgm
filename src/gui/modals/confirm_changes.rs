@@ -5,7 +5,7 @@ use imgui::*;
 use super::ModalInterface;
 use crate::{
     gui::{GuiState, UiExt as _, utils::AUTO_SIZE},
-    sources::{OriginalChange, ChangeKind, OriginalResult, OriginalKey},
+    sources::{OriginalKey, CompareKey, KeyRelation, OriginalResult, OriginalChange, ChangeKind},
     background::{BackgroundSet, DesktopBackground},
 };
 
@@ -65,11 +65,13 @@ impl ConfirmChanges {
             (ChangeKind::New, ChangeResult::Accept) => {
                 let original = set.sources[self.source].original(&key);
                 let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                set.backgrounds.push(DesktopBackground::from_original(original))
+                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original))
             },
-            (ChangeKind::Deleted, ChangeResult::Accept) => set.backgrounds_mut().retain(|b| b.original != key), // TODO: make this work with content mismatches
+            (ChangeKind::Deleted, ChangeResult::Accept) => {
+                set.backgrounds_mut().retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
+            },
             (ChangeKind::Altered, ChangeResult::Accept) => {
-                for background in set.backgrounds.iter_mut().filter(|b| b.original == key) {
+                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
                     let original = set.sources[self.source].original(&key);
                     let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
                     background.update_from(original);

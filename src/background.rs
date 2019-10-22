@@ -1,25 +1,44 @@
 use std::path::{Path, PathBuf};
 use image::{self, ImageResult, DynamicImage};
 use crate::{OptionExt as _, sources::*};
+use bitflags::bitflags;
 
 #[derive(Clone)]
 pub struct DesktopBackground {
     pub name: String,
-    pub location: PathBuf,
+    pub location: String,
     pub source: usize,
     pub original: OriginalKey,
-    pub size: (usize, usize),
-    pub center: (usize, usize),
+    pub size: Option<(u32, u32)>,
+    pub center: Option<(u32, u32)>,
     pub comments: Vec<String>,
+    pub flags: DesktopBackgroundFlags,
 }
 
 impl DesktopBackground {
-    pub fn from_original(_original: &dyn Original) -> DesktopBackground {
-        unimplemented!()
+    pub fn from_original(source: usize, key: OriginalKey, original: &dyn Original) -> DesktopBackground {
+        DesktopBackground {
+            name: original.location(),
+            location: original.location(),
+            source: source,
+            original: key,
+            size: original.size(),
+            center: original.size().map(|(x, y)| (x / 2, y / 2)),
+            comments: Vec::new(),
+            flags: DesktopBackgroundFlags::UNEDITED,
+        }
     }
 
     pub fn update_from(&mut self, _original: &dyn Original) -> DesktopBackground {
         unimplemented!()
+    }
+}
+
+bitflags! {
+    pub struct DesktopBackgroundFlags: u32 {
+        const UNEDITED = 0x1;
+        const MISSING_ORIGINAL = 0x2;
+        const ORIGINAL_UNAVAILABLE = 0x4;
     }
 }
 
@@ -81,6 +100,7 @@ impl BackgroundSet {
 pub trait Original {
     fn read_image(&self) -> ImageResult<DynamicImage>;
     fn location(&self) -> String;
+    fn size(&self) -> Option<(u32, u32)>;
 }
 
 

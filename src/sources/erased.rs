@@ -12,12 +12,22 @@ pub trait ErasedDesktopBackgroundSource {
 #[derive(Clone)]
 pub struct OriginalKey {
     value: serde_json::Value,
-    comparer: Box<fn(&OriginalKey, &OriginalKey) -> bool>,
+    comparer: Box<fn(&OriginalKey, &OriginalKey) -> KeyRelation>,
     hasher: Box<fn(&OriginalKey, &mut dyn Hasher)>,
 }
 
-impl PartialEq for OriginalKey { fn eq(&self, other: &Self) -> bool { (self.comparer)(self, other) } }
-impl Hash for OriginalKey { fn hash<H: Hasher>(&self, hasher: &mut H) { (self.hasher)(self, hasher) } }
+impl CompareKey for OriginalKey { 
+    fn compare(&self, other: &Self) -> KeyRelation { (self.comparer)(self, other) } 
+}
+
+impl Hash for OriginalKey { 
+    fn hash<H: Hasher>(&self, hasher: &mut H) { (self.hasher)(self, hasher) } 
+}
+
+impl PartialEq for OriginalKey {
+    fn eq(&self, other: &Self) -> bool { self.compare(other) == KeyRelation::SameOriginal }
+}
+
 impl Eq for OriginalKey { }
 
 impl OriginalKey {
@@ -34,10 +44,10 @@ impl OriginalKey {
     }
 }
 
-fn key_comparer<'a, S: DesktopBackgroundSource<'a>>(k1: &OriginalKey, k2: &OriginalKey) -> bool {
+fn key_comparer<'a, S: DesktopBackgroundSource<'a>>(k1: &OriginalKey, k2: &OriginalKey) -> KeyRelation {
     match (serde_json::from_value::<S::Key>(k1.value.clone()), serde_json::from_value::<S::Key>(k2.value.clone())) {
-        (Ok(k1), Ok(k2)) => k1 == k2,
-        _ => false,
+        (Ok(k1), Ok(k2)) => k1.compare(&k2),
+        _ => KeyRelation::Distinct,
     }
 }
 

@@ -9,6 +9,29 @@ mod erased;
 pub use erased::{OriginalKey, ErasedDesktopBackgroundSource};
 pub use folder::FolderSource;
 
+pub trait DesktopBackgroundSource<'a> {
+    type Key: serde::Serialize + serde::de::DeserializeOwned + CompareKey + Hash;
+    type Original: Original;
+    type Error: Debug + 'a;
+    // type KeyIter: Iterator<Item=Self::Key> + 'a;
+    fn name(&self) -> &str;
+    // fn keys(&'a self) -> Self::KeyIter;
+    fn original(&self, key: &Self::Key) -> OriginalResult<&Self::Original>;
+    fn reload(&mut self) -> Vec<OriginalChange<Self::Key, Self::Error>>;
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum KeyRelation { SameOriginal, ContentMismatch, Distinct }
+
+pub trait CompareKey {
+    fn compare(&self, other: &Self) -> KeyRelation;
+}
+
+pub struct OriginalChange<K = OriginalKey, E = Box<dyn Debug>> {
+    pub key: K,
+    pub kind: ChangeKind<E>,
+}
+
 pub enum OriginalResult<O> {
     Original(O),
     ContentMismatch(O),
@@ -26,22 +49,6 @@ impl<O> OriginalResult<O> {
             NotFound => NotFound,
         }
     }
-}
-
-pub trait DesktopBackgroundSource<'a> {
-    type Key: serde::Serialize + serde::de::DeserializeOwned + Eq + Hash;
-    type Original: Original;
-    type Error: Debug + 'a;
-    // type KeyIter: Iterator<Item=Self::Key> + 'a;
-    fn name(&self) -> &str;
-    // fn keys(&'a self) -> Self::KeyIter;
-    fn original(&self, key: &Self::Key) -> OriginalResult<&Self::Original>;
-    fn reload(&mut self) -> Vec<OriginalChange<Self::Key, Self::Error>>;
-}
-
-pub struct OriginalChange<K = OriginalKey, E = Box<dyn Debug>> {
-    pub key: K,
-    pub kind: ChangeKind<E>,
 }
 
 pub enum ChangeKind<E> {

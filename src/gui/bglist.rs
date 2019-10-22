@@ -22,36 +22,25 @@ impl<'a> GuiState<'a> {
             Some(set) => {
                 let mut entries = (0..set.sources().len()).map(|_| Vec::new()).collect::<Vec<_>>();
                 for background in set.backgrounds() {
-                    let original = match set.sources()[background.source].original(&background.original) {
-                        OriginalResult::Original(original) => Some(OriginalEntry {
-                            texture: {
-                                if !self.image_cache.contains_image(&background.original) {
-                                    if let Ok(image) = original.read_image() {
-                                        self.image_cache.insert_image(background.original.clone(), image);
-                                    }
-                                }
-                                match self.image_cache.load_texture(&background.original, textures) {
+                    let original = set.sources()[background.source].original(&background.original);
+                    if let OriginalResult::Original(original) = original {
+                        if !self.image_cache.contains_image(&background.original) {
+                            if let Ok(image) = original.read_image() {
+                                self.image_cache.insert_image(background.original.clone(), image);
+                            }
+                        }
+                    }
+                    let original = match original {
+                        OriginalResult::Original(original) | OriginalResult::ContentMismatch(original) => {
+                            Some(OriginalEntry {
+                                texture: match self.image_cache.load_texture(&background.original, textures) {
                                     Some(Ok(texture)) => Some(texture),
                                     _ => None
-                                }
-                            },
-                            location: original.location(),
-                            changed: false,
-                        }),
-                        OriginalResult::ContentMismatch(original) => Some(OriginalEntry {
-                            texture: {
-                                match original.read_image() {
-                                    Ok(image) => self.image_cache.insert_image(background.original.clone(), image),
-                                    Err(_) => { self.image_cache.remove_image(&background.original); }
-                                }
-                                match self.image_cache.load_texture(&background.original, textures) {
-                                    Some(Ok(texture)) => Some(texture),
-                                    _ => None
-                                }
-                            },
-                            location: original.location(),
-                            changed: true,
-                        }),
+                                },
+                                location: original.location(),
+                                changed: false,
+                            })
+                        },
                         _ => None,
                     };
                     entries[background.source].push(BackgroundListEntry { 

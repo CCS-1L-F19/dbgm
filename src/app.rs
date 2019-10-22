@@ -4,11 +4,6 @@ use winapi::um::combaseapi;
 
 use crate::{check_result, background::*};
 
-pub enum CurrentDesktopBackground {
-    ImageFolder,
-    Background(DesktopBackground),
-}
-
 pub struct DBGM {
     interface: *mut IDesktopWallpaper,
     current_set: Option<BackgroundSet>,
