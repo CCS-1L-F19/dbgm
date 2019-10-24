@@ -6,7 +6,7 @@ use super::ModalInterface;
 use crate::{
     gui::{GuiState, UiExt as _, utils::AUTO_SIZE},
     sources::{OriginalKey, CompareKey, KeyRelation, OriginalResult, OriginalChange, ChangeKind},
-    background::{BackgroundSet, DesktopBackground},
+    background::{BackgroundSet, DesktopBackground, DesktopBackgroundFlags},
 };
 
 pub struct ConfirmChanges { 
@@ -62,23 +62,31 @@ impl ConfirmChanges {
     fn apply_one(&mut self, set: &mut BackgroundSet, change: OriginalChange, result: ChangeResult) {
         let key = change.key;
         match (change.kind, result) {
-            (ChangeKind::New, ChangeResult::Accept) => {
+            (ChangeKind::New, result) => {
                 let original = set.sources[self.source].original(&key);
                 let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original))
-            },
-            (ChangeKind::Deleted, ChangeResult::Accept) => {
-                set.backgrounds_mut().retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
+                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original, result == ChangeResult::Reject))
             },
             (ChangeKind::Altered, ChangeResult::Accept) => {
                 for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
                     let original = set.sources[self.source].original(&key);
                     let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                    background.update_from(original);
+                    background.update_from(key.clone(), original);
                 }
-            }
-            (ChangeKind::Unavailable(_), _) => { /* TODO */ },
-            _ => unimplemented!(),
+            },
+            (ChangeKind::Deleted, ChangeResult::Accept) => {
+                set.backgrounds_mut().retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
+            },
+            (ChangeKind::Deleted, ChangeResult::Reject) | (ChangeKind::Altered, ChangeResult::Reject) => {
+                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
+                    background.flags.insert(DesktopBackgroundFlags::ORIGINAL_MISSING);
+                }
+            },
+            (ChangeKind::Unavailable(_), _) => { 
+                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) == KeyRelation::SameOriginal) {
+                    background.flags.insert(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE);
+                }
+            },
         }
     }
 
@@ -139,7 +147,7 @@ impl ConfirmChanges {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum ChangeResult { Accept, Reject } 
 
 pub struct ResultCache {

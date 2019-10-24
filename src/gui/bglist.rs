@@ -18,14 +18,14 @@ struct OriginalEntry {
 impl<'a> GuiState<'a> {
     fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<BackgroundListEntry>> {
         use crate::sources::OriginalResult;
-        match self.dbgm.background_set() {
+        match self.dbgm.background_set_mut() {
             Some(set) => {
-                let mut entries = (0..set.sources().len()).map(|_| Vec::new()).collect::<Vec<_>>();
-                for background in set.backgrounds() {
-                    let original = set.sources()[background.source].original(&background.original);
+                let mut entries = (0..set.sources.len()).map(|_| Vec::new()).collect::<Vec<_>>();
+                for background in set.backgrounds.iter_mut() {
+                    let original = set.sources[background.source].original(&background.original);
                     if let OriginalResult::Original(original) = original {
                         if !self.image_cache.contains_image(&background.original) {
-                            if let Ok(image) = original.read_image() {
+                            if let Ok(image) = background.try_read_image_from(original) {
                                 self.image_cache.insert_image(background.original.clone(), image);
                             }
                         }

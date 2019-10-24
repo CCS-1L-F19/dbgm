@@ -4,7 +4,6 @@ use std::hash::{Hash, Hasher};
 
 pub trait ErasedDesktopBackgroundSource {
     fn name(&self) -> &str;
-    // fn keys<'a>(&'a self) -> Box<dyn Iterator<Item=OriginalKey> + 'a>;
     fn original(&self, id: &OriginalKey) -> OriginalResult<&dyn Original>;
     fn reload(&mut self) -> Vec<OriginalChange<OriginalKey, Box<dyn Debug>>>;
 }
@@ -64,12 +63,6 @@ fn key_hasher<'a, S: DesktopBackgroundSource<'a>>(key: &OriginalKey, hasher: &mu
 
 impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S {
     fn name(&self) -> &str { self.name() }
-
-    /*
-    fn keys<'a>(&'a self) -> Box<dyn Iterator<Item=OriginalKey> + 'a> {
-        Box::new(self.keys().map(OriginalKey::new::<S>))
-    }
-    */
 
     fn original(&self, key: &OriginalKey) -> OriginalResult<&dyn Original> {
         key.try_deserialize()

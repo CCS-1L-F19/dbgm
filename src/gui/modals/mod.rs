@@ -7,7 +7,7 @@ use enum_dispatch::*;
 use imgui::*;
 
 use crate::{
-    OptionExt as _,
+    utils::OptionExt as _,
     gui::{AUTO_SIZE, GuiState, utils::{self, UiExt as _}},
     sources::FolderSource,
 };

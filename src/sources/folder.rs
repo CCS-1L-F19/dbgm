@@ -6,7 +6,7 @@ use std::{
     fs::{self, File},
 };
 
-use image::{ImageResult, DynamicImage, GenericImageView};
+use image::{ImageResult, DynamicImage};
 
 use super::*;
 
@@ -74,7 +74,6 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
             match File::open(&original.path).and_then(FolderSource::hash_file) {
                 Ok(hash) if hash != original.hash => {
                     original.hash = hash; // TODO: Figure out how to deal with the two hashes
-                    original.size = original.read_image().map(|i| i.dimensions()).ok();
                     Some(OriginalChange { key: key, kind: ChangeKind::Altered })
                 },
                 Err(ref e) if e.kind() == ErrorKind::NotFound => {
@@ -88,7 +87,7 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
             }
         }).collect::<Vec<_>>();
 
-        self.originals.retain(|k, v| !to_remove.contains(k));
+        self.originals.retain(|k, _| !to_remove.contains(k));
         
         // We've removed all existing originals, anything left in contents is new.
         for (_, entry) in contents {
@@ -101,7 +100,6 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
                         mismatch: false,
                         path: entry.path(),
                         hash: hash,
-                        size: Some(image.dimensions()),
                     });
                     changes.push(OriginalChange { 
                         key: FileKey { filename, hash }, kind: ChangeKind::New
@@ -114,7 +112,7 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
     }
 }
 
-#[derive(Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Hash, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FileKey {
     filename: OsString,
     hash: [u8; HASH_SIZE],
@@ -134,7 +132,6 @@ pub struct OriginalFile {
     mismatch: bool,
     path: PathBuf,
     hash: [u8; HASH_SIZE],
-    size: Option<(u32, u32)>,
 }
 
 impl Original for OriginalFile {
@@ -144,9 +141,5 @@ impl Original for OriginalFile {
 
     fn location(&self) -> String {
         self.path.to_string_lossy().to_owned().to_string()
-    }
-
-    fn size(&self) -> Option<(u32, u32)> {
-        self.size
     }
 }
