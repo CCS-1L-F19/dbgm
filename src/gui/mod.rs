@@ -15,7 +15,7 @@ use self::utils::*;
 use self::modals::{Modal, ModalInterface, ChangeSetInfo};
 use self::resources::GuiResources;
 
-pub use self::utils::{Textures, ImageCache};
+pub use self::utils::{Textures, TextureInfo, ImageCache};
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
@@ -77,7 +77,7 @@ impl<'a> GuiState<'a> {
                 let name = set.name().unwrap_or("(unnamed set)");
                 let folder = set.image_folder().map(|f| f.to_string_lossy()).unwrap_or(Cow::from("(no image folder)"));
                 let text = im_str!("{} - {}", name, folder);
-                ui.pad_to_center(ui.calc_text_size(&text, false, -1.0)[0]);
+                ui.pad_to_center_h(ui.calc_text_size(&text, false, -1.0)[0]);
                 ui.text(&text);
                 ui.separator();
             }

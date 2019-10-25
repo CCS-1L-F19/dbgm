@@ -1,14 +1,18 @@
+use std::collections::HashMap;
+
 use image::*;
 use imgui::TextureId;
 use gfx::{format, texture as tex, Factory as _};
 use gfx_device_gl::{Resources, Factory};
-use crate::gui::Textures;
+
+use crate::gui::{Textures, TextureInfo};
 
 type ColorFormat = format::Srgba8;
 
 pub struct GfxGlTextures<'a> {
     pub(in super) factory: &'a mut Factory,
     pub(in super) textures: &'a mut imgui::Textures<imgui_gfx_renderer::Texture<Resources>>,
+    pub(in super) texture_infos: &'a mut HashMap<TextureId, TextureInfo>,
 }
 
 impl<'a> Textures for GfxGlTextures<'a> {
@@ -26,7 +30,15 @@ impl<'a> Textures for GfxGlTextures<'a> {
             tex::SamplerInfo::new(tex::FilterMethod::Bilinear, tex::WrapMode::Tile)
         );
 
-        Ok(self.textures.insert((srv, sampler)))
+        let id = self.textures.insert((srv, sampler));
+        self.texture_infos.insert(id, TextureInfo {
+            size: [width as f32, height as f32]
+        });
+        Ok(id)
+    }
+
+    fn texture_info(&self, texture: TextureId) -> Option<TextureInfo> {
+        self.texture_infos.get(&texture).map(|x| *x)
     }
 
     /*

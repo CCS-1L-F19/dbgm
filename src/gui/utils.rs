@@ -8,9 +8,15 @@ use super::modals::ErrorModal;
 
 pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
+#[derive(Copy, Clone)]
+pub struct TextureInfo {
+    pub size: [f32; 2],
+}
+
 pub trait Textures {
     type CreationError: std::fmt::Debug;
     fn create_texture(&mut self, image: &image::DynamicImage) -> Result<TextureId, Self::CreationError>;
+    fn texture_info(&self, texture: TextureId) -> Option<TextureInfo>;
 }
 
 pub struct ImageCache<K: Hash + Eq> {
@@ -55,16 +61,21 @@ impl<K: Hash + Eq> ImageCache<K> {
 }
 
 pub trait UiExt {
-    fn pad_to_center(&self, width: f32);
+    fn pad_to_center_h(&self, width: f32);
+    fn pad_to_center_v(&self, height: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
     fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool;
     fn toggle_button(&self, id: &ImStr, text_on: &str, text_off: &str, value: &mut bool);
+    fn move_cursor(&self, amount: [f32; 2]);
 }
 
 impl<'ui> UiExt for Ui<'ui> {
-    fn pad_to_center(&self, width: f32) {
-        let cpos = self.cursor_pos();
-        self.set_cursor_pos([cpos[0] + (self.content_region_max()[0] - width) / 2.0, cpos[1]]);
+    fn pad_to_center_h(&self, width: f32) {
+        self.move_cursor([(self.content_region_avail()[0] - width) / 2.0, 0.0]);
+    }
+
+    fn pad_to_center_v(&self, height: f32) {
+        self.move_cursor([0.0, (self.content_region_avail()[1] - height) / 2.0])
     }
 
     fn is_popup_open(&self, popup: &ImStr) -> bool {
@@ -95,6 +106,22 @@ impl<'ui> UiExt for Ui<'ui> {
             *value = !*value;
         }
     }
+
+    fn move_cursor(&self, amount: [f32; 2]) {
+        let cursor_pos = self.cursor_pos();
+        self.set_cursor_pos([cursor_pos[0] + amount[0], cursor_pos[1] + amount[1]]);
+    }
+}
+
+pub trait ChildWindowExt: Sized {
+    fn border_box(self, ui: &Ui, size: [f32; 2]) -> Self;
+}
+
+impl<'a> ChildWindowExt for ChildWindow<'a> {
+    fn border_box(self, ui: &Ui, size: [f32; 2]) -> Self {
+        let border_size = ui.clone_style().child_border_size;
+        self.size([f32::max(0.0, size[0] - border_size), f32::max(0.0, size[1] - border_size)])
+    }
 }
 
 pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
@@ -106,4 +133,9 @@ pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
         Err(e) => return Err(ErrorModal::new(format!("Could not open {} picker.", desc), Some(e))),
         _ => Ok(None),
     }
+}
+
+pub fn fit_size(original: [f32; 2], bounds: [f32; 2]) -> [f32; 2] {
+    let scale_factor = f32::min(bounds[0] / original[0], bounds[1] / original[1]);
+    [original[0] * scale_factor, original[1] * scale_factor]
 }

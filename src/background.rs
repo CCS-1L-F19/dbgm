@@ -6,7 +6,7 @@ use bitflags::bitflags;
 #[derive(Clone)]
 pub struct DesktopBackground {
     pub name: String,
-    pub location: PathBuf,
+    pub location: Option<PathBuf>,
     pub source: usize,
     pub original: OriginalKey,
     pub size: MaybeStale<(u32, u32)>,
@@ -24,7 +24,7 @@ impl DesktopBackground {
         flags.set(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE, size.is_none());
         DesktopBackground {
             name: original.location(),
-            location: unimplemented!(), // TODO: Figure out how this should work
+            location: None, // TODO: Figure out how this should work
             source: source,
             original: key,
             size: size.into(),

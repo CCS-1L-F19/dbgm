@@ -1,9 +1,11 @@
+use std::time::Instant;
+use std::collections::HashMap;
+
 use gfx::Device;
 use glutin::{Event, WindowEvent};
-use imgui::{Context, FontConfig, FontSource, Ui};
+use imgui::{Context, FontConfig, FontSource, Ui, TextureId};
 use imgui_gfx_renderer::{Renderer, Shaders};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use std::time::Instant;
 
 mod texture;
 
@@ -128,6 +130,7 @@ pub struct RenderSystem {
     pub factory: types::Factory,
     pub main_color: Option<gfx::handle::RenderTargetView<types::Resources, ColorFormat>>,
     pub main_depth: gfx::handle::DepthStencilView<types::Resources, gfx::format::DepthStencil>,
+    pub texture_infos: HashMap<TextureId, crate::gui::TextureInfo>,
 }
 
 #[cfg(feature = "opengl")]
@@ -186,6 +189,7 @@ impl RenderSystem {
             factory,
             main_color: Some(main_color),
             main_depth,
+            texture_infos: HashMap::new(),
         }
     }
     pub fn window(&self) -> &glutin::Window {
@@ -204,7 +208,11 @@ impl RenderSystem {
         self.windowed_context.swap_buffers().unwrap();
     }
     pub fn textures(&mut self) -> texture::GfxGlTextures {
-        texture::GfxGlTextures { factory: &mut self.factory, textures: self.renderer.textures() }
+        texture::GfxGlTextures { 
+            factory: &mut self.factory, 
+            textures: self.renderer.textures(), 
+            texture_infos: &mut self.texture_infos 
+        }
     }
 }
 

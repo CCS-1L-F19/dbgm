@@ -48,6 +48,7 @@ impl ConfirmChanges {
     pub fn apply_many(mut self, state: &mut GuiState) {
         let set = state.dbgm.background_set_mut().expect("Cannot incorporate changes when no background set is open!");
         while let Some(change) = self.changes.pop() {
+            println!("Change: {:?}", &change.kind);
             match self.result_cache.get(&change.kind) {
                 None => {
                     self.changes.push(change);
@@ -174,15 +175,15 @@ impl ResultCache {
     pub fn get<E: std::fmt::Debug>(&mut self, kind: &ChangeKind<E>) -> Option<ChangeResult> {
         let loc = self.select(kind);
         match loc.take() {
-            Some((result, true)) => { *loc = Some((result, true)); Some(result) }
-            Some((result, false)) => Some(result),
+            Some((result, false)) => { *loc = Some((result, false)); Some(result) }
+            Some((result, true)) => Some(result),
             None => None,
         }
     }
 
     pub fn put<E: std::fmt::Debug>(&mut self, kind: &ChangeKind<E>, result: ChangeResult, once: bool) {
         let loc = self.select(kind);
-        if let None | Some((_, false)) = loc {
+        if let None | Some((_, true)) = loc {
             *loc = Some((result, once));
         }
     }

@@ -50,6 +50,7 @@ impl<O> OriginalResult<O> {
     }
 }
 
+#[derive(Debug)]
 pub enum ChangeKind<E> {
     /// A new original has been discovered.
     New,

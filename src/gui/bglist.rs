@@ -1,6 +1,6 @@
 use imgui::*;
 use super::{
-    GuiState, AUTO_SIZE, utils::Textures, modals::AddFolderSource
+    GuiState, AUTO_SIZE, utils::{self, Textures, *}, modals::AddFolderSource
 };
 
 struct BackgroundListEntry {
@@ -65,7 +65,7 @@ impl<'a> GuiState<'a> {
                         let source = &set.sources()[i];
                         if ui.collapsing_header(&im_str!("{}###Source{}", source.name(), i)).build() {
                             for (j, bg) in bgs.into_iter().enumerate() {
-                                self.draw_background_entry(ui, (i, j), bg);
+                                self.draw_background_entry(ui, textures, (i, j), bg);
                             }
                         }
                     }   
@@ -73,7 +73,7 @@ impl<'a> GuiState<'a> {
             }
         })
     }
-
+    
     fn draw_list_header(&mut self, ui: &Ui) {
         let style = ui.clone_style();
         let header_text = im_str!("Background sources");
@@ -118,13 +118,23 @@ impl<'a> GuiState<'a> {
         padding.map(|t| t.pop(ui));
     }
 
-    fn draw_background_entry(&self, ui: &Ui, id: (usize, usize), background: BackgroundListEntry) {
+    fn draw_background_entry<T: Textures + ?Sized>(&self, ui: &Ui, textures: &mut T, id: (usize, usize), background: BackgroundListEntry) {
         let entry_id = ui.push_id(&im_str!("Source{}Background{}", id.0, id.1));
-        ChildWindow::new(im_str!("BackgroundFrame")).build(ui, || {
-            ui.columns(2, im_str!("Columns"), false);
+        let hsize = ui.content_region_max()[0];
+        ChildWindow::new(im_str!("BackgroundFrame")).border(true).border_box(ui, [0.0, hsize * 0.2]).build(ui, || {
+            ui.columns(2, im_str!("Columns"), true);
+            let max_height = ui.content_region_max()[1];
+            ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
             let texture = background.original.and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
-            Image::new(texture, AUTO_SIZE).build(ui);
+            let dimensions = utils::fit_size(textures.texture_info(texture).unwrap().size, [max_height, max_height]);
+            ui.pad_to_center_v(dimensions[1]);
+            Image::new(texture, dimensions).build(ui);
+            ui.set_cursor_pos([0.0, max_height]);
+            ui.next_column();
+            ui.text(background.name);
         });
         entry_id.pop(ui);
     }
+
+    
 }

@@ -93,7 +93,7 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
         for (_, entry) in contents {
             // TODO: We could go purely by extension here, and say that other files are corrupted
             // instead of silently ignoring them. Alternatively, logging for people who care.
-            if let Ok(image) = image::open(entry.path()) {
+            if image::open(entry.path()).is_ok() {
                 if let Ok(hash) = File::open(entry.path()).and_then(FolderSource::hash_file) {
                     let filename = entry.file_name();
                     self.originals.insert(filename.clone(), OriginalFile {
