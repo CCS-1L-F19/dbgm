@@ -1,6 +1,6 @@
 use imgui::*;
 use super::{
-    GuiState, AUTO_SIZE, utils::{self, Textures, *}, modals::AddFolderSource
+    GuiState, utils::{self, Textures, *}, modals::AddFolderSource
 };
 
 struct BackgroundListEntry {
@@ -12,7 +12,6 @@ struct BackgroundListEntry {
 struct OriginalEntry {
     texture: Option<TextureId>,
     location: String,
-    changed: bool,
 }
 
 impl<'a> GuiState<'a> {
@@ -22,6 +21,7 @@ impl<'a> GuiState<'a> {
             Some(set) => {
                 let mut entries = (0..set.sources.len()).map(|_| Vec::new()).collect::<Vec<_>>();
                 for background in set.backgrounds.iter_mut() {
+                    if background.excluded { continue; }
                     let original = set.sources[background.source].original(&background.original);
                     if let OriginalResult::Original(original) = original {
                         if !self.image_cache.contains_image(&background.original) {
@@ -38,7 +38,6 @@ impl<'a> GuiState<'a> {
                                     _ => None
                                 },
                                 location: original.location(),
-                                changed: false,
                             })
                         },
                         _ => None,
@@ -125,13 +124,14 @@ impl<'a> GuiState<'a> {
             ui.columns(2, im_str!("Columns"), true);
             let max_height = ui.content_region_max()[1];
             ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
-            let texture = background.original.and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
+            let texture = background.original.as_ref().and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
             let dimensions = utils::fit_size(textures.texture_info(texture).unwrap().size, [max_height, max_height]);
             ui.pad_to_center_v(dimensions[1]);
             Image::new(texture, dimensions).build(ui);
             ui.set_cursor_pos([0.0, max_height]);
             ui.next_column();
             ui.text(background.name);
+            ui.text_disabled(background.original.as_ref().map(|o| o.location.as_str()).unwrap_or(""));
         });
         entry_id.pop(ui);
     }

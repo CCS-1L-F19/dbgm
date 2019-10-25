@@ -139,6 +139,10 @@ impl Original for OriginalFile {
         image::open(&self.path)
     }
 
+    fn name(&self) -> String {
+        self.path.file_name().unwrap().to_string_lossy().to_string()
+    }
+
     fn location(&self) -> String {
         self.path.to_string_lossy().to_owned().to_string()
     }

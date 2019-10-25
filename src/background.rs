@@ -6,7 +6,7 @@ use bitflags::bitflags;
 #[derive(Clone)]
 pub struct DesktopBackground {
     pub name: String,
-    pub location: Option<PathBuf>,
+    pub location: String,
     pub source: usize,
     pub original: OriginalKey,
     pub size: MaybeStale<(u32, u32)>,
@@ -23,8 +23,8 @@ impl DesktopBackground {
         let size = original.read_image().map(|i| i.dimensions()).ok();
         flags.set(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE, size.is_none());
         DesktopBackground {
-            name: original.location(),
-            location: None, // TODO: Figure out how this should work
+            name: original.name(),
+            location: original.location(), // TODO: Figure out how this should work
             source: source,
             original: key,
             size: size.into(),
@@ -38,7 +38,8 @@ impl DesktopBackground {
     /// Update this background when changes have been made to its original. 
     pub fn update_from(&mut self, key: OriginalKey, original: &dyn Original) {
         assert!(key.compare(&self.original) != KeyRelation::Distinct);
-        self.name = original.location();
+        self.name = original.name();
+        self.location = original.location();
         self.original = key;
         let image = self.try_read_image_from(original);
         let size = image.map(|i| i.dimensions()).ok();
@@ -124,6 +125,7 @@ impl BackgroundSet {
 
 pub trait Original {
     fn read_image(&self) -> ImageResult<DynamicImage>;
+    fn name(&self) -> String;
     fn location(&self) -> String;
 }
 
