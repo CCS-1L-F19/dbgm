@@ -10,18 +10,21 @@ mod bglist;
 mod resources;
 mod modals;
 mod utils;
+mod widgets;
 
 use self::utils::*;
 use self::modals::{Modal, ModalInterface, ChangeSetInfo};
-use self::resources::GuiResources;
 
-pub use self::utils::{Textures, TextureInfo, ImageCache};
+use self::resources::GuiResources;
+pub use self::utils::{Textures, Texture, ImageCache};
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
     pub(crate) dbgm: &'a mut DBGM,
     image_cache: ImageCache<OriginalKey>,
     resources: GuiResources,
+    filter: bglist::Filter,
+    debug: bool,
 }
 
 impl<'a> GuiState<'a> {
@@ -31,6 +34,8 @@ impl<'a> GuiState<'a> {
             dbgm: dbgm, 
             image_cache: ImageCache::new(), 
             resources: GuiResources::load(textures),
+            filter: Default::default(),
+            debug: false,
         }
     }
 
@@ -70,6 +75,7 @@ impl<'a> GuiState<'a> {
     }
 
     pub fn update<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) -> bool {
+        if self.debug { ui.show_metrics_window(&mut self.debug); }
         Self::in_window(ui, || {
             self.check_modal(ui);
             ui.menu_bar(|| self.draw_menu_bar(ui));
@@ -100,6 +106,9 @@ impl<'a> GuiState<'a> {
             }
             if MenuItem::new(im_str!("Edit set information...")).enabled(self.dbgm.background_set().is_some()).build(ui) {
                 self.open_modal(ChangeSetInfo::new())
+            }
+            if MenuItem::new(im_str!("Show debug window")).build(ui) {
+                self.debug = !self.debug;
             }
         });
     }

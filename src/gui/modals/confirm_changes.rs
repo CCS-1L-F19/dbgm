@@ -129,7 +129,7 @@ impl ConfirmChanges {
         // TODO: Show backgrounds here
         if ui.button(im_str!("OK"), AUTO_SIZE) { return Some(ChangeResult::Accept); }
         ui.same_line(0.0);
-        ui.toggle_button(&im_str!("ShowDetails"), "Hide Error Details", "Show Error Details", &mut self.show_error_details);
+        ui.toggle_button_labeled(&im_str!("ShowDetails"), "Hide Error Details", "Show Error Details", &mut self.show_error_details);
         if self.show_error_details {
             let mut details = im_str!("{:#?}", cause);
             InputTextMultiline::new(ui, &im_str!("###Error Details"), &mut details, AUTO_SIZE).read_only(true).build();

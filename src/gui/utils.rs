@@ -9,18 +9,18 @@ use super::modals::ErrorModal;
 pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
 
 #[derive(Copy, Clone)]
-pub struct TextureInfo {
+pub struct Texture {
+    pub id: TextureId,
     pub size: [f32; 2],
 }
 
 pub trait Textures {
     type CreationError: std::fmt::Debug;
-    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<TextureId, Self::CreationError>;
-    fn texture_info(&self, texture: TextureId) -> Option<TextureInfo>;
+    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<Texture, Self::CreationError>;
 }
 
 pub struct ImageCache<K: Hash + Eq> {
-    images: HashMap<K, (image::DynamicImage, Option<TextureId>)>,
+    images: HashMap<K, (image::DynamicImage, Option<Texture>)>,
 }
 
 impl<K: Hash + Eq> ImageCache<K> {
@@ -36,7 +36,7 @@ impl<K: Hash + Eq> ImageCache<K> {
         self.images.insert(key, (image, None));
     }
 
-    pub fn remove_image(&mut self, key: &K) -> Option<(image::DynamicImage, Option<TextureId>)> {
+    pub fn remove_image(&mut self, key: &K) -> Option<(image::DynamicImage, Option<Texture>)> {
         self.images.remove(key)
     }
 
@@ -44,7 +44,7 @@ impl<K: Hash + Eq> ImageCache<K> {
         self.images.get(key).map(|(i, _)| i)
     }
 
-    pub fn load_texture<T: Textures + ?Sized>(&mut self, key: &K, textures: &mut T) -> Option<Result<TextureId, T::CreationError>> {
+    pub fn load_texture<T: Textures + ?Sized>(&mut self, key: &K, textures: &mut T) -> Option<Result<Texture, T::CreationError>> {
         match self.images.get_mut(key) {
             Some((_, Some(texture))) => Some(Ok(*texture)),
             Some((image, texture_slot)) => {
@@ -65,7 +65,8 @@ pub trait UiExt {
     fn pad_to_center_v(&self, height: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
     fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool;
-    fn toggle_button(&self, id: &ImStr, text_on: &str, text_off: &str, value: &mut bool);
+    fn toggle_button_labeled(&self, id: &ImStr, text_on: &str, text_off: &str, pressed: &mut bool);
+    fn small_toggle_button(&self, label: &ImStr, pressed: &mut bool) -> bool;
     fn move_cursor(&self, amount: [f32; 2]);
 }
 
@@ -100,11 +101,20 @@ impl<'ui> UiExt for Ui<'ui> {
         }
     }
 
-    fn toggle_button(&self, id: &ImStr, text_on: &str, text_off: &str, value: &mut bool) {
-        let label = if *value { text_on } else { text_off };
+    fn toggle_button_labeled(&self, id: &ImStr, text_on: &str, text_off: &str, pressed: &mut bool) {
+        let label = if *pressed { text_on } else { text_off };
         if self.button(&im_str!("{}###{}", label, id), AUTO_SIZE) {
-            *value = !*value;
+            *pressed = !*pressed;
         }
+    }
+
+    fn small_toggle_button(&self, label: &ImStr, pressed: &mut bool) -> bool {
+        let style_color = if *pressed { StyleColor::ButtonActive } else { StyleColor::Button };
+        let color = self.push_style_color(StyleColor::Button, self.style_color(style_color));
+        let toggle = self.small_button(label);
+        if toggle { *pressed = !*pressed; }
+        color.pop(self);
+        toggle
     }
 
     fn move_cursor(&self, amount: [f32; 2]) {

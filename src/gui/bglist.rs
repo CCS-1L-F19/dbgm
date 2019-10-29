@@ -1,27 +1,38 @@
 use imgui::*;
 use super::{
-    GuiState, utils::{self, Textures, *}, modals::AddFolderSource
+    GuiState, utils::Textures, modals::AddFolderSource, widgets::*,
 };
+use crate::background::{DesktopBackground, DesktopBackgroundFlags};
 
-struct BackgroundListEntry {
-    name: String,
-    source_id: usize,
-    original: Option<OriginalEntry>,
+pub(super) struct Filter {
+    pub show_edited: bool,
+    pub show_excluded: bool,
 }
 
-struct OriginalEntry {
-    texture: Option<TextureId>,
-    location: String,
+impl Filter {
+    pub fn should_display(&self, background: &DesktopBackground) -> bool {
+        if background.excluded { return self.show_excluded; }
+        self.show_edited || background.flags.contains(DesktopBackgroundFlags::UNEDITED)
+    }
+}
+
+impl Default for Filter {
+    fn default() -> Self {
+        Filter { 
+            show_edited: true,
+            show_excluded: false,
+        }
+    }
 }
 
 impl<'a> GuiState<'a> {
-    fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<BackgroundListEntry>> {
+    fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<(usize, Option<CardOriginalInfo>)>> {
         use crate::sources::OriginalResult;
         match self.dbgm.background_set_mut() {
             Some(set) => {
                 let mut entries = (0..set.sources.len()).map(|_| Vec::new()).collect::<Vec<_>>();
-                for background in set.backgrounds.iter_mut() {
-                    if background.excluded { continue; }
+                let filter = &self.filter;
+                for (id, background) in set.backgrounds.iter_mut().enumerate().filter(|(_, b)| filter.should_display(b)) {
                     let original = set.sources[background.source].original(&background.original);
                     if let OriginalResult::Original(original) = original {
                         if !self.image_cache.contains_image(&background.original) {
@@ -32,7 +43,7 @@ impl<'a> GuiState<'a> {
                     }
                     let original = match original {
                         OriginalResult::Original(original) | OriginalResult::ContentMismatch(original) => {
-                            Some(OriginalEntry {
+                            Some(CardOriginalInfo {
                                 texture: match self.image_cache.load_texture(&background.original, textures) {
                                     Some(Ok(texture)) => Some(texture),
                                     _ => None
@@ -42,11 +53,7 @@ impl<'a> GuiState<'a> {
                         },
                         _ => None,
                     };
-                    entries[background.source].push(BackgroundListEntry { 
-                        name: background.name.clone(), 
-                        source_id: background.source, 
-                        original: original 
-                    });
+                    entries[background.source].push((id, original));
                 }
                 entries
             }
@@ -58,16 +65,22 @@ impl<'a> GuiState<'a> {
         let entries = self.generate_background_entries(textures);
         self.draw_list_header(ui);
         ChildWindow::new(im_str!("background list")).build(ui, || {
-            if let Some(set) = self.dbgm.background_set() {
-                for (i, bgs) in entries.into_iter().enumerate() {
-                    if !bgs.is_empty() {
-                        let source = &set.sources()[i];
-                        if ui.collapsing_header(&im_str!("{}###Source{}", source.name(), i)).build() {
-                            for (j, bg) in bgs.into_iter().enumerate() {
-                                self.draw_background_entry(ui, textures, (i, j), bg);
-                            }
+            if let Some(set) = self.dbgm.background_set_mut() {
+                for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
+                    if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).build() {
+                        for (id, original) in bgs.into_iter() {
+                            let background = &mut set.backgrounds[id];
+                            let id = &im_str!("Background{}", id);
+                            let card = EditableBackgroundCard::new(
+                                id,
+                                &self.resources,
+                                background,
+                                original,
+                            );
+                            card.draw(ui);
+                            // self.draw_background_entry(ui, textures, bg.id, background, bg.original);
                         }
-                    }   
+                    }
                 }
             }
         })
@@ -98,7 +111,7 @@ impl<'a> GuiState<'a> {
                     (StyleColor::ButtonActive, [0.0, 0.0, 0.0, 0.0]),
                     (StyleColor::ButtonHovered, [0.0, 0.0, 0.0, 0.0]),
                 ]);
-                if ImageButton::new(self.resources.blue_plus, [height, height]).frame_padding(0).build(ui) {
+                if ImageButton::new(self.resources.blue_plus.id, [height, height]).frame_padding(0).build(ui) {
                     ui.open_popup(im_str!("AddSource"));
                 }
                 unsafe {
@@ -117,24 +130,41 @@ impl<'a> GuiState<'a> {
         padding.map(|t| t.pop(ui));
     }
 
-    fn draw_background_entry<T: Textures + ?Sized>(&self, ui: &Ui, textures: &mut T, id: (usize, usize), background: BackgroundListEntry) {
-        let entry_id = ui.push_id(&im_str!("Source{}Background{}", id.0, id.1));
+    /*
+    fn draw_background_entry<T: Textures + ?Sized>(
+        &self, 
+        ui: &Ui, 
+        textures: &mut T, 
+        id: usize,
+        background: &mut DesktopBackground, 
+        original: Option<OriginalEntry>,
+    ) {
         let hsize = ui.content_region_max()[0];
-        ChildWindow::new(im_str!("BackgroundFrame")).border(true).border_box(ui, [0.0, hsize * 0.2]).build(ui, || {
-            ui.columns(2, im_str!("Columns"), true);
-            let max_height = ui.content_region_max()[1];
-            ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
-            let texture = background.original.as_ref().and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
-            let dimensions = utils::fit_size(textures.texture_info(texture).unwrap().size, [max_height, max_height]);
-            ui.pad_to_center_v(dimensions[1]);
-            Image::new(texture, dimensions).build(ui);
-            ui.set_cursor_pos([0.0, max_height]);
-            ui.next_column();
-            ui.text(background.name);
-            ui.text_disabled(background.original.as_ref().map(|o| o.location.as_str()).unwrap_or(""));
-        });
-        entry_id.pop(ui);
-    }
+        ChildWindow::new(&im_str!("Background{}", id))
+            .border(true)
+            .border_box(ui, [0.0, hsize * 0.2])
+            .build(ui, || {
+                ui.columns(2, im_str!("Columns"), true);
+                let max_height = ui.content_region_max()[1];
+                ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
+                let texture = original.as_ref().and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
+                let dimensions = utils::fit_size(texture.size, [max_height, max_height]);
+                ui.pad_to_center_v(dimensions[1]);
+                Image::new(texture, dimensions).build(ui);
+                ui.set_cursor_pos([0.0, max_height]);
+                ui.next_column();
+                ui.text(background.name);
+                ui.text_disabled(original.as_ref().map(|o| o.location.as_str()).unwrap_or(""));
+                
+                let toolbar_size = [16.0, 16.0];
+                let frame_padding = ui.clone_style().frame_padding;
+                ui.set_cursor_pos([
+                    ui.content_region_max()[0] - toolbar_size[0] - frame_padding[0] * 2.0, 
+                    ui.content_region_max()[1] - toolbar_size[1] - frame_padding[1] * 2.0,
+                ]);
 
-    
+                ImageButton::new(self.resources.white_x, [16.0, 16.0]).build_toggle(ui, &mut background.excluded);
+            });
+    }
+    */
 }

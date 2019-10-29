@@ -1,23 +1,19 @@
-use std::collections::HashMap;
-
 use image::*;
-use imgui::TextureId;
 use gfx::{format, texture as tex, Factory as _};
 use gfx_device_gl::{Resources, Factory};
 
-use crate::gui::{Textures, TextureInfo};
+use crate::gui::{Textures, Texture};
 
 type ColorFormat = format::Srgba8;
 
 pub struct GfxGlTextures<'a> {
     pub(in super) factory: &'a mut Factory,
     pub(in super) textures: &'a mut imgui::Textures<imgui_gfx_renderer::Texture<Resources>>,
-    pub(in super) texture_infos: &'a mut HashMap<TextureId, TextureInfo>,
 }
 
 impl<'a> Textures for GfxGlTextures<'a> {
     type CreationError = gfx::CombinedError;
-    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<TextureId, gfx::CombinedError> {
+    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<Texture, gfx::CombinedError> {
         let (width, height) = image.dimensions();
         
         let (_, srv) = self.factory.create_texture_immutable_u8::<ColorFormat>(
@@ -31,14 +27,7 @@ impl<'a> Textures for GfxGlTextures<'a> {
         );
 
         let id = self.textures.insert((srv, sampler));
-        self.texture_infos.insert(id, TextureInfo {
-            size: [width as f32, height as f32]
-        });
-        Ok(id)
-    }
-
-    fn texture_info(&self, texture: TextureId) -> Option<TextureInfo> {
-        self.texture_infos.get(&texture).map(|x| *x)
+        Ok(Texture { id, size: [width as f32, height as f32] })
     }
 
     /*

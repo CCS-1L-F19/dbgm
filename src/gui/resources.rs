@@ -1,5 +1,4 @@
-use imgui::TextureId;
-use super::utils::Textures;
+use super::utils::{Textures, Texture};
 
 macro_rules! load_internal_texture {
     {$textures:ident, $path:tt} => { {
@@ -11,7 +10,7 @@ macro_rules! load_internal_texture {
 macro_rules! gui_resources {
     { $($name:ident: $path:tt),* } => {
         pub struct GuiResources {
-            $(pub $name: TextureId),*
+            $(pub $name: Texture),*
         }
 
         impl GuiResources {
@@ -26,5 +25,7 @@ macro_rules! gui_resources {
 
 gui_resources! {
     missing_image: "../resources/missing.png",
-    blue_plus: "../resources/blue_plus.png"
+    blue_plus: "../resources/blue_plus.png",
+    hidden: "../resources/hidden.png",
+    not_hidden: "../resources/not_hidden.png"
 }
