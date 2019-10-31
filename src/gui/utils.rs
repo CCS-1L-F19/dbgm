@@ -4,20 +4,10 @@ use std::path::PathBuf;
 
 use imgui::*;
 
+use crate::renderer::{Textures, Texture};
 use super::modals::ErrorModal;
 
 pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
-
-#[derive(Copy, Clone)]
-pub struct Texture {
-    pub id: TextureId,
-    pub size: [f32; 2],
-}
-
-pub trait Textures {
-    type CreationError: std::fmt::Debug;
-    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<Texture, Self::CreationError>;
-}
 
 pub struct ImageCache<K: Hash + Eq> {
     images: HashMap<K, (image::DynamicImage, Option<Texture>)>,

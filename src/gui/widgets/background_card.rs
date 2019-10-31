@@ -1,5 +1,4 @@
-use imgui::*;
-use crate::gui::{utils::{self, *}, GuiResources};
+use crate::gui::prelude::*;
 use crate::background::{DesktopBackground, DesktopBackgroundFlags};
 
 const ICON_SIZE: [f32; 2] = [16.0, 16.0];
@@ -23,20 +22,19 @@ impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
         EditableBackgroundCard { id: id.into(), background, resources, original }
     }
 
-    pub fn heights(ui: &Ui) -> (f32, f32) {
+    pub fn size(ui: &Ui) -> [f32; 2] {
         let style = ui.clone_style();
         let non_content = style.window_padding[1] + style.window_border_size;
         let line = ui.current_font_size() + style.item_spacing[1];
-        (non_content * 2.0, line * 2.0 + ICON_SIZE[1])
+        [0.0, non_content * 2.0 + line * 2.0 + ICON_SIZE[1]]
     }
 
     pub fn draw(self, ui: &Ui) {
         let EditableBackgroundCard { id, resources, background, original } = self;
         let original = original.as_ref();
-        let (non_content_height, content_height) = EditableBackgroundCard::heights(ui);
         ChildWindow::new(id)
             .border(true)
-            .size([0.0, non_content_height + content_height])
+            .size(EditableBackgroundCard::size(ui))
             .build(ui, || {
                 ui.set_cursor_pos(ui.window_content_region_min());
                 ui.columns(2, im_str!("Columns"), true);
@@ -60,16 +58,26 @@ impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
                     (StyleColor::ButtonActive, highlight),
                     (StyleColor::ButtonHovered, highlight),
                 ]);
+                let frame_padding = ui.push_style_var(StyleVar::FramePadding([0.0, 0.0]));
 
                 if background.flags.contains(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE) {
-                    
+                    Image::new(resources.unavailable.id, ICON_SIZE).build(ui);
+                    ui.same_line(0.0);
                 }
 
-                let texture = if background.excluded { resources.hidden } else { resources.not_hidden };
-                if ImageButton::new(texture.id, ICON_SIZE).frame_padding(0).build(ui) {
+                let icon = if background.flags.contains(DesktopBackgroundFlags::UNEDITED) { resources.unedited } else { resources.edited };
+                if ImageButton::new(icon.id, ICON_SIZE).build(ui) {
+                    background.flags.toggle(DesktopBackgroundFlags::UNEDITED);
+                }
+
+                ui.same_line(0.0);
+
+                let icon = if background.excluded { resources.hidden } else { resources.not_hidden };
+                if ImageButton::new(icon.id, ICON_SIZE).build(ui) {
                     background.excluded = !background.excluded;
                 }
 
+                frame_padding.pop(ui);
                 bcol.pop(ui);
             });
     }

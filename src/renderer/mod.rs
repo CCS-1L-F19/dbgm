@@ -2,11 +2,14 @@ use std::time::Instant;
 
 use gfx::Device;
 use glutin::{Event, WindowEvent};
-use imgui::{Context, FontConfig, FontSource, Ui};
-use imgui_gfx_renderer::{Renderer, Shaders};
+use imgui::{Context, FontConfig, FontSource, Ui, TextureId};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
-mod texture;
+#[cfg_attr(feature = "opengl", path = "gl.rs")]
+#[cfg_attr(feature = "directx", path = "dx.rs")]
+mod backend;
+
+use backend::*;
 
 type ColorFormat = gfx::format::Rgba8;
 
@@ -113,159 +116,13 @@ impl System {
     }
 }
 
-#[cfg(feature = "opengl")]
-mod types {
-    pub type Device = gfx_device_gl::Device;
-    pub type Factory = gfx_device_gl::Factory;
-    pub type Resources = gfx_device_gl::Resources;
-    pub type Textures<'a> = super::texture::GfxGlTextures<'a>;
+#[derive(Copy, Clone)]
+pub struct Texture {
+    pub id: TextureId,
+    pub size: [f32; 2],
 }
 
-#[cfg(feature = "opengl")]
-pub struct RenderSystem {
-    pub renderer: Renderer<ColorFormat, types::Resources>,
-    pub windowed_context: glutin::WindowedContext<glutin::PossiblyCurrent>,
-    pub device: types::Device,
-    pub factory: types::Factory,
-    pub main_color: Option<gfx::handle::RenderTargetView<types::Resources, ColorFormat>>,
-    pub main_depth: gfx::handle::DepthStencilView<types::Resources, gfx::format::DepthStencil>,
-}
-
-#[cfg(feature = "opengl")]
-impl RenderSystem {
-    pub fn init(
-        imgui: &mut Context,
-        builder: glutin::WindowBuilder,
-        events_loop: &glutin::EventsLoop,
-    ) -> RenderSystem {
-        {
-            // Fix incorrect colors with sRGB framebuffer
-            fn imgui_gamma_to_linear(col: [f32; 4]) -> [f32; 4] {
-                let x = col[0].powf(2.2);
-                let y = col[1].powf(2.2);
-                let z = col[2].powf(2.2);
-                let w = 1.0 - (1.0 - col[3]).powf(2.2);
-                [x, y, z, w]
-            }
-
-            let style = imgui.style_mut();
-            for col in 0..style.colors.len() {
-                style.colors[col] = imgui_gamma_to_linear(style.colors[col]);
-            }
-        }
-
-        let context = glutin::ContextBuilder::new().with_vsync(true);
-        let (windowed_context, device, mut factory, main_color, main_depth) =
-            gfx_window_glutin::init(builder, context, &events_loop)
-                .expect("Failed to initialize graphics");
-        let shaders = {
-            let version = device.get_info().shading_language;
-            if version.is_embedded {
-                if version.major >= 3 {
-                    Shaders::GlSlEs300
-                } else {
-                    Shaders::GlSlEs100
-                }
-            } else if version.major >= 4 {
-                Shaders::GlSl400
-            } else if version.major >= 3 {
-                if version.minor >= 2 {
-                    Shaders::GlSl150
-                } else {
-                    Shaders::GlSl130
-                }
-            } else {
-                Shaders::GlSl110
-            }
-        };
-        let renderer =
-            Renderer::init(imgui, &mut factory, shaders).expect("Failed to initialize renderer");
-        RenderSystem {
-            renderer,
-            windowed_context,
-            device,
-            factory,
-            main_color: Some(main_color),
-            main_depth,
-        }
-    }
-    pub fn window(&self) -> &glutin::Window {
-        self.windowed_context.window()
-    }
-    pub fn update_views(&mut self, _: glutin::dpi::LogicalSize) {
-        if let Some(main_color) = self.main_color.as_mut() {
-            gfx_window_glutin::update_views(
-                &self.windowed_context,
-                main_color,
-                &mut self.main_depth,
-            );
-        }
-    }
-    pub fn swap_buffers(&mut self) {
-        self.windowed_context.swap_buffers().unwrap();
-    }
-    pub fn textures(&mut self) -> texture::GfxGlTextures {
-        texture::GfxGlTextures { 
-            factory: &mut self.factory, 
-            textures: self.renderer.textures(),
-        }
-    }
-}
-
-#[cfg(feature = "directx")]
-mod types {
-    pub type Device = gfx_device_dx11::Device;
-    pub type Factory = gfx_device_dx11::Factory;
-    pub type Resources = gfx_device_dx11::Resources;
-}
-
-#[cfg(feature = "directx")]
-pub struct RenderSystem {
-    pub renderer: Renderer<ColorFormat, types::Resources>,
-    pub window: gfx_window_dxgi::Window,
-    pub device: types::Device,
-    pub factory: types::Factory,
-    pub main_color: Option<gfx::handle::RenderTargetView<types::Resources, ColorFormat>>,
-}
-
-#[cfg(feature = "directx")]
-impl RenderSystem {
-    pub fn init(
-        imgui: &mut Context,
-        builder: glutin::WindowBuilder,
-        events_loop: &glutin::EventsLoop,
-    ) -> RenderSystem {
-        let (window, device, mut factory, main_color) =
-            gfx_window_dxgi::init(builder, &events_loop).expect("Failed to initialize graphics");
-        let renderer = Renderer::init(imgui, &mut factory, Shaders::HlslSm40)
-            .expect("Failed to initialize renderer");
-        RenderSystem {
-            renderer,
-            window,
-            device,
-            factory,
-            main_color: Some(main_color),
-        }
-    }
-    pub fn window(&self) -> &glutin::Window {
-        &self.window.inner
-    }
-    pub fn update_views(&mut self, size: glutin::dpi::LogicalSize) {
-        let physical = size.to_physical(self.window().get_hidpi_factor());
-        let (width, height): (u32, u32) = physical.into();
-        let _ = self.main_color.take(); // we need to drop main_color before calling update_views
-        self.main_color = Some(
-            gfx_window_dxgi::update_views(
-                &mut self.window,
-                &mut self.factory,
-                &mut self.device,
-                width as u16,
-                height as u16,
-            )
-            .expect("Failed to update resize"),
-        );
-    }
-    pub fn swap_buffers(&mut self) {
-        self.window.swap_buffers(1);
-    }
+pub trait Textures {
+    type CreationError: std::fmt::Debug;
+    fn create_texture(&mut self, image: &image::DynamicImage) -> Result<Texture, Self::CreationError>;
 }

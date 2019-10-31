@@ -1,4 +1,4 @@
-use super::utils::{Textures, Texture};
+use crate::renderer::{Textures, Texture};
 
 macro_rules! load_internal_texture {
     {$textures:ident, $path:tt} => { {
@@ -27,5 +27,8 @@ gui_resources! {
     missing_image: "../resources/missing.png",
     blue_plus: "../resources/blue_plus.png",
     hidden: "../resources/hidden.png",
-    not_hidden: "../resources/not_hidden.png"
+    not_hidden: "../resources/not_hidden.png",
+    unavailable: "../resources/unavailable.png",
+    edited: "../resources/edited.png",
+    unedited: "../resources/unedited.png"
 }

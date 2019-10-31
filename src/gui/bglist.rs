@@ -1,7 +1,6 @@
-use imgui::*;
-use super::{
-    GuiState, utils::Textures, modals::AddFolderSource, widgets::*,
-};
+use crate::gui::prelude::*;
+use modals::AddFolderSource;
+use widgets::*;
 use crate::background::{DesktopBackground, DesktopBackgroundFlags};
 
 pub(super) struct Filter {
@@ -70,15 +69,18 @@ impl<'a> GuiState<'a> {
                     if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).build() {
                         for (id, original) in bgs.into_iter() {
                             let background = &mut set.backgrounds[id];
-                            let id = &im_str!("Background{}", id);
+                            let imgui_id = ui.push_id(&im_str!("Background{}", id));
+                            if Selectable::new(&im_str!("BackgroundSelectable")).size(EditableBackgroundCard::size(ui)).build(ui) {
+                                self.select_background(id);
+                            }
                             let card = EditableBackgroundCard::new(
-                                id,
+                                &im_str!("BackgroundCard"),
                                 &self.resources,
                                 background,
                                 original,
                             );
                             card.draw(ui);
-                            // self.draw_background_entry(ui, textures, bg.id, background, bg.original);
+                            imgui_id.pop(ui);
                         }
                     }
                 }

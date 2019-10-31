@@ -2,7 +2,7 @@ use image::*;
 use gfx::{format, texture as tex, Factory as _};
 use gfx_device_gl::{Resources, Factory};
 
-use crate::gui::{Textures, Texture};
+use crate::gui::utils::{Textures, Texture};
 
 type ColorFormat = format::Srgba8;
 

@@ -1,10 +1,8 @@
 use std::fmt::Debug;
 
-use imgui::*;
-
 use super::ModalInterface;
 use crate::{
-    gui::{GuiState, UiExt as _, utils::AUTO_SIZE},
+    gui::prelude::*,
     sources::{OriginalKey, CompareKey, KeyRelation, OriginalResult, OriginalChange, ChangeKind},
     background::{BackgroundSet, DesktopBackground, DesktopBackgroundFlags},
 };

@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 
-use imgui::*;
-
 use crate::app::DBGM;
 use crate::background::*;
 use crate::sources::{DesktopBackgroundSource, OriginalKey, ChangeKind};
@@ -9,14 +7,19 @@ use crate::sources::{DesktopBackgroundSource, OriginalKey, ChangeKind};
 mod bglist;
 mod resources;
 mod modals;
-mod utils;
 mod widgets;
+mod utils;
 
-use self::utils::*;
-use self::modals::{Modal, ModalInterface, ChangeSetInfo};
+mod prelude {
+    pub(in super) use imgui::*;
+    pub(in super) use super::{resources::GuiResources, GuiState, modals, widgets, utils};
+    pub(in super) use super::utils::{UiExt, /* ChildWindowExt, */ AUTO_SIZE};
+    pub(in super) use crate::renderer::{Texture, Textures};
+}
 
-use self::resources::GuiResources;
-pub use self::utils::{Textures, Texture, ImageCache};
+use self::prelude::*;
+use utils::ImageCache;
+use modals::{Modal, ChangeSetInfo};
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
@@ -24,6 +27,7 @@ pub struct GuiState<'a> {
     image_cache: ImageCache<OriginalKey>,
     resources: GuiResources,
     filter: bglist::Filter,
+    selected_background: Option<usize>,
     debug: bool,
 }
 
@@ -35,28 +39,8 @@ impl<'a> GuiState<'a> {
             image_cache: ImageCache::new(), 
             resources: GuiResources::load(textures),
             filter: Default::default(),
+            selected_background: None,
             debug: false,
-        }
-    }
-
-    fn open_modal(&mut self, modal: impl Into<Modal>) {
-        self.modal = Some(modal.into());
-    }
-
-    fn check_modal(&mut self, ui: &Ui) {
-        if let Some(modal) = self.modal.take() {
-            let id = im_str!("###{}", modal.id()).to_owned();
-            if !ui.is_popup_open(&id) { ui.open_popup(&id); }
-            let id_with_title = im_str!("{}###{}", modal.title(), id.to_str());
-            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| modal.display(ui, self));
-            match &self.modal {
-                Some(m) if im_str!("###{}", m.id()) != id => {
-                    ui.close_current_popup();
-                    ui.open_popup(&im_str!("###{}", m.id()));
-                }
-                None => ui.close_current_popup(),
-                _ => {},
-            }
         }
     }
 
@@ -120,6 +104,10 @@ impl<'a> GuiState<'a> {
         let mut result_cache = ResultCache::new();
         result_cache.put::<()>(&ChangeKind::New, ChangeResult::Accept, false);
         ConfirmChanges::new(id, set.sources_mut()[id].reload(), result_cache).apply_many(self);
+    }
+
+    fn select_background(&mut self, background: usize) {
+        
     }
 }
 
