@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["AlphaModder"]
 publish = false
 edition = "2018"
+license = "MIT"
 
 [features]
 default = ["opengl"]
