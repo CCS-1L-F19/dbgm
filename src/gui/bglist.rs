@@ -70,28 +70,45 @@ impl<'a> GuiState<'a> {
                     if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).build() {
                         for (id, original) in bgs.into_iter() {
                             let imgui_id = &im_str!("##Background{}", id);
-                            let mut held = false;
-                            let alpha = ui.push_style_var(StyleVar::Alpha(0.5));
-                            if Selectable::new(imgui_id).size(EditableBackgroundCard::size(ui)).build(ui) {
-                                new_selected = Some(id);
-                                held = true;
-                            }
+                            let cursor_pos = ui.cursor_pos();
+                            let alpha = ui.push_style_var(StyleVar::Alpha(0.0));
+                            // This is a dummy element for us to check the hover state of.
+                            Selectable::new(imgui_id).size(EditableBackgroundCard::size(ui)).build(ui);
                             alpha.pop(ui);
-                            ui.same_line(0.0);
-                            let hovered = ui.is_item_hovered();
+                            ui.set_cursor_pos(cursor_pos);
+
                             let selected = self.selected_background == Some(id);
-                            let border = ui.push_style_color(StyleColor::Border, ui.style_color(
-                                if held { StyleColor::FrameBgActive } else if selected || hovered { StyleColor::FrameBgHovered } else { StyleColor::Border }
-                            ));
-                            let card = EditableBackgroundCard::new(
-                                imgui_id,
-                                &self.resources,
-                                &mut set.backgrounds[id],
+                            let hovered_active = ui.is_item_hovered_with_flags(ItemHoveredFlags::ALLOW_WHEN_BLOCKED_BY_ACTIVE_ITEM);
+                            let hovered = ui.is_item_hovered();
+                            let down = ui.is_mouse_down(MouseButton::Left);
+                            let release = ui.is_mouse_released(MouseButton::Left);
+
+                            let background_color = match selected { 
+                                true => StyleColor::FrameBg,
+                                false => StyleColor::ChildBg, 
+                            };
+
+                            let border_color = match (hovered_active, down, selected) {
+                                (true, true, _) => StyleColor::FrameBgActive,
+                                (true, false, _) => StyleColor::FrameBgHovered,
+                                (false, _, true) => StyleColor::FrameBgHovered,
+                                (false, _, false) => StyleColor::Border,
+                            };
+
+                            if hovered && release { new_selected = Some(id); }
+                            
+                            let colors = ui.push_style_colors(&[
+                                (StyleColor::Border, ui.style_color(border_color)),
+                                (StyleColor::ChildBg, ui.style_color(background_color))
+                            ]);
+                            let card = EditableBackgroundCard {
+                                id: imgui_id,
+                                resources: &self.resources,
+                                background: &mut set.backgrounds[id],
                                 original,
-                            );
+                            };
                             card.draw(ui);
-                            border.pop(ui);
-                            // imgui_id.pop(ui);
+                            colors.pop(ui);
                         }
                     }
                 }

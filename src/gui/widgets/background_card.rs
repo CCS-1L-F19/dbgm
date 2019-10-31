@@ -6,22 +6,13 @@ const ICON_SIZE: [f32; 2] = [16.0, 16.0];
 pub struct CardOriginalInfo { pub texture: Option<Texture>, pub location: String }
 
 pub struct EditableBackgroundCard<'i, 'c> {
-    id: Id<'i>,
-    resources: &'c GuiResources,
-    background: &'c mut DesktopBackground,
-    original: Option<CardOriginalInfo>,
+    pub id: &'i ImStr,
+    pub resources: &'c GuiResources,
+    pub background: &'c mut DesktopBackground,
+    pub original: Option<CardOriginalInfo>,
 }
 
 impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
-    pub fn new(
-        id: impl Into<Id<'i>>, 
-        resources: &'c GuiResources,
-        background: &'c mut DesktopBackground, 
-        original: Option<CardOriginalInfo>,
-    ) -> Self {
-        EditableBackgroundCard { id: id.into(), background, resources, original }
-    }
-
     pub fn size(ui: &Ui) -> [f32; 2] {
         let style = ui.clone_style();
         let non_content = style.window_padding[1] + style.window_border_size;
