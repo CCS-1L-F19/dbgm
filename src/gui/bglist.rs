@@ -61,6 +61,7 @@ impl<'a> GuiState<'a> {
     }
 
     pub(super) fn draw_background_list<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) {
+        let mut new_selected = None;
         let entries = self.generate_background_entries(textures);
         self.draw_list_header(ui);
         ChildWindow::new(im_str!("background list")).build(ui, || {
@@ -68,24 +69,37 @@ impl<'a> GuiState<'a> {
                 for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
                     if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).build() {
                         for (id, original) in bgs.into_iter() {
-                            let background = &mut set.backgrounds[id];
-                            let imgui_id = ui.push_id(&im_str!("Background{}", id));
-                            if Selectable::new(&im_str!("BackgroundSelectable")).size(EditableBackgroundCard::size(ui)).build(ui) {
-                                self.select_background(id);
+                            let imgui_id = &im_str!("##Background{}", id);
+                            let mut held = false;
+                            let alpha = ui.push_style_var(StyleVar::Alpha(0.5));
+                            if Selectable::new(imgui_id).size(EditableBackgroundCard::size(ui)).build(ui) {
+                                new_selected = Some(id);
+                                held = true;
                             }
+                            alpha.pop(ui);
+                            ui.same_line(0.0);
+                            let hovered = ui.is_item_hovered();
+                            let selected = self.selected_background == Some(id);
+                            let border = ui.push_style_color(StyleColor::Border, ui.style_color(
+                                if held { StyleColor::FrameBgActive } else if selected || hovered { StyleColor::FrameBgHovered } else { StyleColor::Border }
+                            ));
                             let card = EditableBackgroundCard::new(
-                                &im_str!("BackgroundCard"),
+                                imgui_id,
                                 &self.resources,
-                                background,
+                                &mut set.backgrounds[id],
                                 original,
                             );
                             card.draw(ui);
-                            imgui_id.pop(ui);
+                            border.pop(ui);
+                            // imgui_id.pop(ui);
                         }
                     }
                 }
             }
-        })
+        });
+        if let Some(id) = new_selected {
+            self.select_background(id);
+        }
     }
     
     fn draw_list_header(&mut self, ui: &Ui) {

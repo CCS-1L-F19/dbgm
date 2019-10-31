@@ -106,8 +106,10 @@ impl<'a> GuiState<'a> {
         ConfirmChanges::new(id, set.sources_mut()[id].reload(), result_cache).apply_many(self);
     }
 
+    // TODO: Support multiple selection?
     fn select_background(&mut self, background: usize) {
-        
+        assert!(self.dbgm.background_set().map(|b| background < b.backgrounds.len()).unwrap_or(false));
+        self.selected_background = if self.selected_background != Some(background) { Some(background) } else { None }
     }
 }
 
