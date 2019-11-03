@@ -74,7 +74,7 @@ impl ConfirmChanges {
                 }
             },
             (ChangeKind::Deleted, ChangeResult::Accept) => {
-                set.backgrounds_mut().retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
+                set.backgrounds.retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
             },
             (ChangeKind::Deleted, ChangeResult::Reject) | (ChangeKind::Altered, ChangeResult::Reject) => {
                 for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {

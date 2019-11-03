@@ -101,25 +101,9 @@ impl BackgroundSet {
         self.name = Some(name.as_ref().to_owned());
     }
 
-    pub fn sources(&self) -> &Vec<Box<dyn ErasedDesktopBackgroundSource>> {
-        &self.sources
-    }
-
-    pub fn sources_mut(&mut self) -> &mut Vec<Box<dyn ErasedDesktopBackgroundSource>> {
-        &mut self.sources
-    }
-
     pub fn add_source<S: for<'a> DesktopBackgroundSource<'a> + 'static>(&mut self, source: S) -> usize {
         self.sources.push(Box::new(source));
         self.sources.len() - 1
-    }
-
-    pub fn backgrounds(&self) -> &Vec<DesktopBackground> {
-        &self.backgrounds
-    }
-
-    pub fn backgrounds_mut(&mut self) -> &mut Vec<DesktopBackground> {
-        &mut self.backgrounds
     }
 }
 

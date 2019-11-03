@@ -103,7 +103,7 @@ impl<'a> GuiState<'a> {
         let id = set.add_source(source);
         let mut result_cache = ResultCache::new();
         result_cache.put::<()>(&ChangeKind::New, ChangeResult::Accept, false);
-        ConfirmChanges::new(id, set.sources_mut()[id].reload(), result_cache).apply_many(self);
+        ConfirmChanges::new(id, set.sources[id].reload(), result_cache).apply_many(self);
     }
 
     // TODO: Support multiple selection?
