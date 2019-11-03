@@ -134,23 +134,19 @@ impl<'a> GuiState<'a> {
                 ui.text(header_text);
                 ui.same_line(0.0);
                 let height = ui.content_region_max()[1] - style.frame_padding[1];
-                ui.set_cursor_pos([ui.content_region_max()[0] - height, ui.cursor_pos()[1]]);
-                let bottom_right = [
-                    ui.window_pos()[0] + ui.cursor_pos()[0] + height,
-                    ui.window_pos()[1] + ui.cursor_pos()[1] + height
-                ];
+                let buttons_width = 2.0 * (height + style.item_spacing[0]) - style.item_spacing[0];
+                ui.set_cursor_pos([ui.content_region_max()[0] - buttons_width, ui.cursor_pos()[1]]);
                 let bcol = ui.push_style_colors(&[
                     (StyleColor::Button, [0.0, 0.0, 0.0, 0.0]),
                     (StyleColor::ButtonActive, [0.0, 0.0, 0.0, 0.0]),
                     (StyleColor::ButtonHovered, [0.0, 0.0, 0.0, 0.0]),
                 ]);
-                if ImageButton::new(self.resources.blue_plus.id, [height, height]).frame_padding(0).build(ui) {
-                    ui.open_popup(im_str!("AddSource"));
-                }
-                unsafe {
-                    imgui::sys::igSetNextWindowPos(bottom_right.into(), Condition::Always as i32, [1.0, 0.0].into());
-                }
-                ui.popup(im_str!("AddSource"), || {
+                ImageDropdown::new(im_str!("FilterBackgrounds"), self.resources.filter.id, [height, height]).frame_padding(0).build(ui, || {
+                    ui.checkbox(im_str!("Show edited"), &mut self.filter.show_edited);
+                    ui.checkbox(im_str!("Show excluded"), &mut self.filter.show_excluded);
+                });
+                ui.same_line(0.0);
+                ImageDropdown::new(im_str!("AddSource"), self.resources.blue_plus.id, [height, height]).frame_padding(0).build(ui, || {
                     if Selectable::new(im_str!("From folder...")).build(ui) {
                         ui.close_current_popup();
                         self.open_modal(AddFolderSource::new());

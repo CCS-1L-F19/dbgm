@@ -1,13 +1,11 @@
 // DirectX backend. not finished
 
-#[cfg(feature = "directx")]
 mod types {
     pub type Device = gfx_device_dx11::Device;
     pub type Factory = gfx_device_dx11::Factory;
     pub type Resources = gfx_device_dx11::Resources;
 }
 
-#[cfg(feature = "directx")]
 pub struct RenderSystem {
     pub renderer: Renderer<ColorFormat, types::Resources>,
     pub window: gfx_window_dxgi::Window,
@@ -16,7 +14,6 @@ pub struct RenderSystem {
     pub main_color: Option<gfx::handle::RenderTargetView<types::Resources, ColorFormat>>,
 }
 
-#[cfg(feature = "directx")]
 impl RenderSystem {
     pub fn init(
         imgui: &mut Context,

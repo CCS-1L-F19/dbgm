@@ -30,5 +30,6 @@ gui_resources! {
     not_hidden: "../resources/not_hidden.png",
     unavailable: "../resources/unavailable.png",
     edited: "../resources/edited.png",
-    unedited: "../resources/unedited.png"
+    unedited: "../resources/unedited.png",
+    filter: "../resources/filter.png"
 }
