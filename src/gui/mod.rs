@@ -19,7 +19,7 @@ mod prelude {
 
 use self::prelude::*;
 use utils::ImageCache;
-use modals::{Modal, ChangeSetInfo};
+use modals::{Modal, ChangeSetInfo, confirm_changes::*};
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
@@ -67,7 +67,7 @@ impl<'a> GuiState<'a> {
                 let name = set.name().unwrap_or("(unnamed set)");
                 let folder = set.image_folder().map(|f| f.to_string_lossy()).unwrap_or(Cow::from("(no image folder)"));
                 let text = im_str!("{} - {}", name, folder);
-                ui.pad_to_center_h(ui.calc_text_size(&text, false, -1.0)[0]);
+                ui.center_avail_h(ui.calc_text_size(&text, false, -1.0)[0]);
                 ui.text(&text);
                 ui.separator();
             }
@@ -98,12 +98,16 @@ impl<'a> GuiState<'a> {
     }
 
     fn add_source<S: for<'s> DesktopBackgroundSource<'s> + 'static>(&mut self, source: S) {
-        use modals::confirm_changes::*;
         let set = self.dbgm.background_set_mut().expect("Cannot add source when no background set is open!");
         let id = set.add_source(source);
         let mut result_cache = ResultCache::new();
         result_cache.put::<()>(&ChangeKind::New, ChangeResult::Accept, false);
         ConfirmChanges::new(id, set.sources[id].reload(), result_cache).apply_many(self);
+    }
+
+    fn reload_source(&mut self, id: usize) {
+        let set = self.dbgm.background_set_mut().expect("Cannot reload source when no background set is open!");
+        ConfirmChanges::new(id, set.sources[id].reload(), ResultCache::new()).apply_many(self);
     }
 
     // TODO: Support multiple selection?

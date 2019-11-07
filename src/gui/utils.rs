@@ -51,8 +51,10 @@ impl<K: Hash + Eq> ImageCache<K> {
 }
 
 pub trait UiExt {
-    fn pad_to_center_h(&self, width: f32);
-    fn pad_to_center_v(&self, height: f32);
+    fn center_h(&self, width: f32);
+    fn center_v(&self, height: f32);
+    fn center_avail_h(&self, width: f32);
+    fn center_avail_v(&self, height: f32);
     fn is_popup_open(&self, popup: &ImStr) -> bool;
     fn button_hack(&self, label: &ImStr, size: [f32; 2], enabled: bool) -> bool;
     fn toggle_button_labeled(&self, id: &ImStr, text_on: &str, text_off: &str, pressed: &mut bool);
@@ -61,11 +63,19 @@ pub trait UiExt {
 }
 
 impl<'ui> UiExt for Ui<'ui> {
-    fn pad_to_center_h(&self, width: f32) {
+    fn center_h(&self, width: f32) {
+        self.set_cursor_pos([(self.content_region_max()[0] - self.window_content_region_min()[0] - width) / 2.0, self.cursor_pos()[1]]);
+    }
+
+    fn center_v(&self, height: f32) {
+        self.set_cursor_pos([self.cursor_pos()[0], (self.content_region_max()[1] - self.window_content_region_min()[1] - height) / 2.0]);
+    }
+
+    fn center_avail_h(&self, width: f32) {
         self.move_cursor([(self.content_region_avail()[0] - width) / 2.0, 0.0]);
     }
 
-    fn pad_to_center_v(&self, height: f32) {
+    fn center_avail_v(&self, height: f32) {
         self.move_cursor([0.0, (self.content_region_avail()[1] - height) / 2.0])
     }
 

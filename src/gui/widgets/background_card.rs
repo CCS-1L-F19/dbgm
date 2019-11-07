@@ -34,7 +34,7 @@ impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
                 ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
                 let texture = original.and_then(|o| o.texture).unwrap_or(resources.missing_image);
                 let dimensions = utils::fit_size(texture.size, [max_height, max_height]);
-                ui.pad_to_center_v(dimensions[1]);
+                ui.center_avail_v(dimensions[1]);
                 Image::new(texture.id, dimensions).build(ui);
                 // ui.set_cursor_pos([0.0, ui.window_content_region_max()[1]]);
 

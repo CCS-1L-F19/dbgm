@@ -24,6 +24,22 @@ impl Default for Filter {
     }
 }
 
+enum SourceOperation {
+    Reload(usize),
+    Remove(usize),
+    Select(usize),
+}
+
+impl SourceOperation {
+    fn apply(self, state: &mut GuiState) {
+        match self {
+            SourceOperation::Reload(source) => state.reload_source(source),
+            SourceOperation::Remove(source) => unimplemented!(),
+            SourceOperation::Select(source) => state.select_background(source),
+        }
+    }
+}
+
 impl<'a> GuiState<'a> {
     fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<(usize, Option<CardOriginalInfo>)>> {
         use crate::sources::OriginalResult;
@@ -61,13 +77,14 @@ impl<'a> GuiState<'a> {
     }
 
     pub(super) fn draw_background_list<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) {
-        let mut new_selected = None;
+        let mut operation = None;
         let entries = self.generate_background_entries(textures);
         self.draw_list_header(ui);
         ChildWindow::new(im_str!("background list")).build(ui, || {
             if let Some(set) = self.dbgm.background_set_mut() {
                 for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
-                    if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).build() {
+                    let header_pos = ui.cursor_pos();
+                    if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).flags(ImGuiTreeNodeFlags::AllowItemOverlap).build() {
                         for (id, original) in bgs.into_iter() {
                             let imgui_id = &im_str!("##Background{}", id);
                             let cursor_pos = ui.cursor_pos();
@@ -95,7 +112,7 @@ impl<'a> GuiState<'a> {
                                 (false, _, false) => StyleColor::Border,
                             };
 
-                            if hovered && release { new_selected = Some(id); }
+                            if hovered && release { operation = Some(SourceOperation::Select(id)); }
                             
                             let colors = ui.push_style_colors(&[
                                 (StyleColor::Border, ui.style_color(border_color)),
@@ -111,12 +128,45 @@ impl<'a> GuiState<'a> {
                             colors.pop(ui);
                         }
                     }
+                    let next_item = ui.cursor_pos();
+                    
+                    let bcol = ui.push_style_colors(&[
+                        (StyleColor::Button, [0.0, 0.0, 0.0, 0.0]),
+                        (StyleColor::ButtonActive, [0.0, 0.0, 0.0, 0.0]),
+                        (StyleColor::ButtonHovered, [0.0, 0.0, 0.0, 0.0]),
+                    ]);
+
+                    let num_buttons = 2;
+                    let style = ui.clone_style();
+                    let base_size = ui.current_font_size();
+                    let padding_correction = style.frame_padding[0] - style.item_spacing[0];
+                    
+                    let mut current_button = 0;
+                    let mut toolbar_button = |texture, scale| {
+                        let x_center = ui.content_region_max()[0] - padding_correction - (
+                            ((num_buttons - current_button) as f32 * (base_size + style.item_spacing[0])) - 0.5 * base_size
+                        );
+                        let y = header_pos[1] + style.frame_padding[1] - base_size * (scale - 1.0) / 2.0;
+                        let icon_size = scale * base_size;
+                        ui.set_cursor_pos([x_center - icon_size / 2.0, y]);
+                        current_button += 1;
+                        ImageButton::new(texture, [icon_size, icon_size]).frame_padding(0).build(ui)
+                    };
+
+                    if toolbar_button(self.resources.reload_small.id, 1.15) {
+                        operation = Some(SourceOperation::Reload(i));
+                    }
+
+                    if toolbar_button(self.resources.blue_x.id, 1.0) {
+                        operation = Some(SourceOperation::Remove(i));
+                    }
+
+                    bcol.pop(ui);
+                    ui.set_cursor_pos(next_item);
                 }
             }
         });
-        if let Some(id) = new_selected {
-            self.select_background(id);
-        }
+        operation.map(|op| op.apply(self));
     }
     
     fn draw_list_header(&mut self, ui: &Ui) {
@@ -158,42 +208,4 @@ impl<'a> GuiState<'a> {
         bgcolor.map(|t| t.pop(ui)); 
         padding.map(|t| t.pop(ui));
     }
-
-    /*
-    fn draw_background_entry<T: Textures + ?Sized>(
-        &self, 
-        ui: &Ui, 
-        textures: &mut T, 
-        id: usize,
-        background: &mut DesktopBackground, 
-        original: Option<OriginalEntry>,
-    ) {
-        let hsize = ui.content_region_max()[0];
-        ChildWindow::new(&im_str!("Background{}", id))
-            .border(true)
-            .border_box(ui, [0.0, hsize * 0.2])
-            .build(ui, || {
-                ui.columns(2, im_str!("Columns"), true);
-                let max_height = ui.content_region_max()[1];
-                ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
-                let texture = original.as_ref().and_then(|o| o.texture).unwrap_or(self.resources.missing_image);
-                let dimensions = utils::fit_size(texture.size, [max_height, max_height]);
-                ui.pad_to_center_v(dimensions[1]);
-                Image::new(texture, dimensions).build(ui);
-                ui.set_cursor_pos([0.0, max_height]);
-                ui.next_column();
-                ui.text(background.name);
-                ui.text_disabled(original.as_ref().map(|o| o.location.as_str()).unwrap_or(""));
-                
-                let toolbar_size = [16.0, 16.0];
-                let frame_padding = ui.clone_style().frame_padding;
-                ui.set_cursor_pos([
-                    ui.content_region_max()[0] - toolbar_size[0] - frame_padding[0] * 2.0, 
-                    ui.content_region_max()[1] - toolbar_size[1] - frame_padding[1] * 2.0,
-                ]);
-
-                ImageButton::new(self.resources.white_x, [16.0, 16.0]).build_toggle(ui, &mut background.excluded);
-            });
-    }
-    */
 }

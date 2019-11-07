@@ -31,5 +31,8 @@ gui_resources! {
     unavailable: "../resources/unavailable.png",
     edited: "../resources/edited.png",
     unedited: "../resources/unedited.png",
-    filter: "../resources/filter.png"
+    filter: "../resources/filter.png",
+    reload_small: "../resources/reload_small.png",
+    blue_x: "../resources/blue_x.png"
+    // reload: "../resources/reload.png"
 }
