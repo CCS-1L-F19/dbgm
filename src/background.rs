@@ -13,12 +13,11 @@ pub struct DesktopBackground {
     pub center: MaybeStale<(u32, u32)>,
     pub comments: Vec<String>,
     pub flags: DesktopBackgroundFlags,
-    pub excluded: bool,
 }
 
 impl DesktopBackground {
     /// Create a new DesktopBackground from an Original.
-    pub fn from_original(source: usize, key: OriginalKey, original: &dyn Original, excluded: bool) -> DesktopBackground {
+    pub fn from_original(source: usize, key: OriginalKey, original: &dyn Original) -> DesktopBackground {
         let mut flags = DesktopBackgroundFlags::UNEDITED;
         let size = original.read_image().map(|i| i.dimensions()).ok();
         flags.set(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE, size.is_none());
@@ -31,7 +30,6 @@ impl DesktopBackground {
             center: size.map(|(x, y)| (x / 2, y / 2)).into(),
             comments: Vec::new(),
             flags: DesktopBackgroundFlags::UNEDITED,
-            excluded: excluded,
         }
     }
 
@@ -65,6 +63,8 @@ bitflags! {
         const ORIGINAL_MISSING = 0x2;
         /// This background's original is temporarily or permanently unavailable.
         const ORIGINAL_UNAVAILABLE = 0x4;
+        /// This background has been excluded from the set and will be hidden by default.
+        const EXCLUDED = 0x8;
     }
 }
 

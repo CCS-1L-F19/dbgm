@@ -12,14 +12,14 @@ mod utils;
 
 mod prelude {
     pub(in super) use imgui::*;
-    pub(in super) use super::{resources::GuiResources, GuiState, modals, widgets, utils};
+    pub(in super) use super::{resources::GuiResources, GuiState, Operation, modals, widgets, utils};
     pub(in super) use super::utils::{UiExt, /* ChildWindowExt, */ AUTO_SIZE};
     pub(in super) use crate::renderer::{Texture, Textures};
 }
 
 use self::prelude::*;
 use utils::ImageCache;
-use modals::{Modal, ChangeSetInfo, confirm_changes::*};
+use modals::{Modal, ChangeSetInfo, RemoveSource, confirm_changes::*};
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
@@ -73,7 +73,7 @@ impl<'a> GuiState<'a> {
             }
             let window_width = ui.content_region_max()[0];
             ui.columns(2, im_str!("MainColumns"), true);
-            ui.set_column_offset(1, 2.0 * window_width / 3.0);
+            ui.set_column_offset(1, window_width * 2.0 / 3.0);
             ui.next_column();
             self.draw_background_list(ui, textures);
         });
@@ -114,6 +114,28 @@ impl<'a> GuiState<'a> {
     fn select_background(&mut self, background: usize) {
         assert!(self.dbgm.background_set().map(|b| background < b.backgrounds.len()).unwrap_or(false));
         self.selected_background = if self.selected_background != Some(background) { Some(background) } else { None }
+    }
+}
+
+pub enum Operation {
+    ReloadSource(usize),
+    RemoveSource(usize),
+    SelectBackground(usize),
+    ChangeFlags(usize, DesktopBackgroundFlags),
+}
+
+impl Operation {
+    fn apply(self, state: &mut GuiState) {
+        match self {
+            Operation::ReloadSource(source) => state.reload_source(source),
+            Operation::RemoveSource(source) => state.open_modal(RemoveSource(source)),
+            Operation::SelectBackground(background) => state.select_background(background),
+            Operation::ChangeFlags(background, flags) => {
+                if let Some(set) = state.dbgm.background_set_mut() {
+                    set.backgrounds[background].flags = flags;
+                }
+            }
+        }
     }
 }
 

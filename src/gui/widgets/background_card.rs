@@ -5,27 +5,30 @@ const ICON_SIZE: [f32; 2] = [16.0, 16.0];
 
 pub struct CardOriginalInfo { pub texture: Option<Texture>, pub location: String }
 
-pub struct EditableBackgroundCard<'i, 'c> {
+pub struct BackgroundCard<'i, 'c> {
     pub id: &'i ImStr,
     pub resources: &'c GuiResources,
-    pub background: &'c mut DesktopBackground,
+    pub background: &'c DesktopBackground,
     pub original: Option<CardOriginalInfo>,
+    pub editable: bool,
+    pub width: f32,
 }
 
-impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
-    pub fn size(ui: &Ui) -> [f32; 2] {
+impl<'i, 'c> BackgroundCard<'i, 'c> {
+    pub fn size(ui: &Ui, custom_width: f32) -> [f32; 2] {
         let style = ui.clone_style();
         let non_content = style.window_padding[1] + style.window_border_size;
         let line = ui.current_font_size() + style.item_spacing[1];
-        [0.0, non_content * 2.0 + line * 2.0 + ICON_SIZE[1]]
+        [custom_width, non_content * 2.0 + line * 2.0 + ICON_SIZE[1]]
     }
 
-    pub fn draw(self, ui: &Ui) {
-        let EditableBackgroundCard { id, resources, background, original } = self;
+    pub fn draw(self, ui: &Ui) -> DesktopBackgroundFlags {
+        let BackgroundCard { id, resources, background, original, editable, width } = self;
+        let mut flags = background.flags.clone();
         let original = original.as_ref();
         ChildWindow::new(id)
             .border(true)
-            .size(EditableBackgroundCard::size(ui))
+            .size(BackgroundCard::size(ui, width))
             .build(ui, || {
                 ui.set_cursor_pos(ui.window_content_region_min());
                 ui.columns(2, im_str!("Columns"), true);
@@ -43,7 +46,11 @@ impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
                 ui.text(&background.name);
                 ui.text_disabled(original.as_ref().map(|o| o.location.as_str()).unwrap_or(""));
 
-                let highlight = ui.style_color(StyleColor::ScrollbarGrab);
+                let highlight = match editable {
+                    true => ui.style_color(StyleColor::ScrollbarGrab),
+                    false => [0.0, 0.0, 0.0, 0.0]
+                };
+
                 let bcol = ui.push_style_colors(&[
                     (StyleColor::Button, [0.0, 0.0, 0.0, 0.0]),
                     (StyleColor::ButtonActive, highlight),
@@ -51,25 +58,26 @@ impl<'i, 'c> EditableBackgroundCard<'i, 'c> {
                 ]);
                 let frame_padding = ui.push_style_var(StyleVar::FramePadding([0.0, 0.0]));
 
-                if background.flags.contains(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE) {
+                if flags.contains(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE) {
                     Image::new(resources.unavailable.id, ICON_SIZE).build(ui);
                     ui.same_line(0.0);
                 }
 
-                let icon = if background.flags.contains(DesktopBackgroundFlags::UNEDITED) { resources.unedited } else { resources.edited };
-                if ImageButton::new(icon.id, ICON_SIZE).build(ui) {
-                    background.flags.toggle(DesktopBackgroundFlags::UNEDITED);
+                let icon = if flags.contains(DesktopBackgroundFlags::UNEDITED) { resources.unedited } else { resources.edited };
+                if ImageButton::new(icon.id, ICON_SIZE).build(ui) && editable {
+                    flags.toggle(DesktopBackgroundFlags::UNEDITED);
                 }
 
                 ui.same_line(0.0);
 
-                let icon = if background.excluded { resources.hidden } else { resources.not_hidden };
-                if ImageButton::new(icon.id, ICON_SIZE).build(ui) {
-                    background.excluded = !background.excluded;
+                let icon = if flags.contains(DesktopBackgroundFlags::EXCLUDED) { resources.hidden } else { resources.not_hidden };
+                if ImageButton::new(icon.id, ICON_SIZE).build(ui) && editable {
+                    flags.toggle(DesktopBackgroundFlags::EXCLUDED);
                 }
 
                 frame_padding.pop(ui);
                 bcol.pop(ui);
             });
+        flags
     }
 }

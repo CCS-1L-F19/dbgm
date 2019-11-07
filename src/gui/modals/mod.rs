@@ -6,11 +6,13 @@ pub mod error;
 pub mod change_set_info;
 pub mod add_folder_source;
 pub mod confirm_changes;
+pub mod remove_source;
 
 pub use error::ErrorModal;
 pub use change_set_info::ChangeSetInfo;
 pub use add_folder_source::AddFolderSource;
 pub use confirm_changes::ConfirmChanges;
+pub use remove_source::RemoveSource;
 
 #[enum_dispatch]
 pub trait ModalInterface {
@@ -28,6 +30,7 @@ pub enum Modal {
     ChangeSetInfo,
     AddFolderSource,
     ConfirmChanges,
+    RemoveSource,
 }
 
 impl<'a> GuiState<'a> {

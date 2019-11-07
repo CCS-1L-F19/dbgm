@@ -10,7 +10,7 @@ pub(super) struct Filter {
 
 impl Filter {
     pub fn should_display(&self, background: &DesktopBackground) -> bool {
-        if background.excluded { return self.show_excluded; }
+        if background.flags.contains(DesktopBackgroundFlags::EXCLUDED) { return self.show_excluded; }
         self.show_edited || background.flags.contains(DesktopBackgroundFlags::UNEDITED)
     }
 }
@@ -20,22 +20,6 @@ impl Default for Filter {
         Filter { 
             show_edited: true,
             show_excluded: false,
-        }
-    }
-}
-
-enum SourceOperation {
-    Reload(usize),
-    Remove(usize),
-    Select(usize),
-}
-
-impl SourceOperation {
-    fn apply(self, state: &mut GuiState) {
-        match self {
-            SourceOperation::Reload(source) => state.reload_source(source),
-            SourceOperation::Remove(source) => unimplemented!(),
-            SourceOperation::Select(source) => state.select_background(source),
         }
     }
 }
@@ -80,8 +64,8 @@ impl<'a> GuiState<'a> {
         let mut operation = None;
         let entries = self.generate_background_entries(textures);
         self.draw_list_header(ui);
-        ChildWindow::new(im_str!("background list")).build(ui, || {
-            if let Some(set) = self.dbgm.background_set_mut() {
+        ChildWindow::new(im_str!("BackgroundList")).build(ui, || {
+            if let Some(set) = self.dbgm.background_set() {
                 for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
                     let header_pos = ui.cursor_pos();
                     if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).flags(ImGuiTreeNodeFlags::AllowItemOverlap).build() {
@@ -90,7 +74,7 @@ impl<'a> GuiState<'a> {
                             let cursor_pos = ui.cursor_pos();
                             let alpha = ui.push_style_var(StyleVar::Alpha(0.0));
                             // This is a dummy element for us to check the hover state of.
-                            Selectable::new(imgui_id).size(EditableBackgroundCard::size(ui)).build(ui);
+                            Selectable::new(imgui_id).size(BackgroundCard::size(ui, 0.0)).build(ui);
                             alpha.pop(ui);
                             ui.set_cursor_pos(cursor_pos);
 
@@ -112,19 +96,24 @@ impl<'a> GuiState<'a> {
                                 (false, _, false) => StyleColor::Border,
                             };
 
-                            if hovered && release { operation = Some(SourceOperation::Select(id)); }
+                            if hovered && release { operation = Some(Operation::SelectBackground(id)); }
                             
                             let colors = ui.push_style_colors(&[
                                 (StyleColor::Border, ui.style_color(border_color)),
                                 (StyleColor::ChildBg, ui.style_color(background_color))
                             ]);
-                            let card = EditableBackgroundCard {
+                            let card = BackgroundCard {
                                 id: imgui_id,
                                 resources: &self.resources,
-                                background: &mut set.backgrounds[id],
+                                background: &set.backgrounds[id],
                                 original,
+                                editable: true,
+                                width: 0.0,
                             };
-                            card.draw(ui);
+                            let new_flags = card.draw(ui);
+                            if new_flags != set.backgrounds[id].flags {
+                                operation = Some(Operation::ChangeFlags(id, new_flags));
+                            }
                             colors.pop(ui);
                         }
                     }
@@ -154,11 +143,11 @@ impl<'a> GuiState<'a> {
                     };
 
                     if toolbar_button(self.resources.reload_small.id, 1.15) {
-                        operation = Some(SourceOperation::Reload(i));
+                        operation = Some(Operation::ReloadSource(i));
                     }
 
                     if toolbar_button(self.resources.blue_x.id, 1.0) {
-                        operation = Some(SourceOperation::Remove(i));
+                        operation = Some(Operation::RemoveSource(i));
                     }
 
                     bcol.pop(ui);

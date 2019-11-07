@@ -62,11 +62,13 @@ impl ConfirmChanges {
         let key = change.key;
         match (change.kind, result) {
             (ChangeKind::New, result) => {
-                // let start = std::time::Instant::now();
                 let original = set.sources[self.source].original(&key);
                 let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original, result == ChangeResult::Reject));
-                // println!("{:?}", std::time::Instant::now() - start);
+                let new_id = set.backgrounds.len();
+                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original));
+                if result == ChangeResult::Reject { 
+                    set.backgrounds[new_id].flags.set(DesktopBackgroundFlags::EXCLUDED, true);
+                }
             },
             (ChangeKind::Altered, ChangeResult::Accept) => {
                 for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
