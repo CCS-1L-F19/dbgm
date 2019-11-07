@@ -1,9 +1,38 @@
 use crate::gui::prelude::*;
-use crate::background::{DesktopBackground, DesktopBackgroundFlags};
+use crate::background::{DesktopBackground, DesktopBackgroundFlags, Original};
+use crate::sources::{OriginalResult, OriginalKey};
+
+use utils::ImageCache;
 
 const ICON_SIZE: [f32; 2] = [16.0, 16.0];
 
 pub struct CardOriginalInfo { pub texture: Option<Texture>, pub location: String }
+
+/*
+impl CardOriginalInfo {
+    pub fn try_load<T: Textures + ?Sized>(background: &mut DesktopBackground, image_cache: &mut ImageCache<OriginalKey>, textures: &mut T) -> Option<CardOriginalInfo> {
+        if let OriginalResult::Original(original) = original {
+            if !image_cache.contains_image(&background.original) {
+                if let Ok(image) = background.try_read_image_from(original) {
+                    image_cache.insert_image(background.original.clone(), image);
+                }
+            }
+        }
+        let original = match original {
+            OriginalResult::Original(original) | OriginalResult::ContentMismatch(original) => {
+                Some(CardOriginalInfo {
+                    texture: match image_cache.load_texture(&background.original, textures) {
+                        Some(Ok(texture)) => Some(texture),
+                        _ => None
+                    },
+                    location: original.location(),
+                })
+            },
+            _ => None,
+        };
+    }
+}
+*/
 
 pub struct BackgroundCard<'i, 'c> {
     pub id: &'i ImStr,

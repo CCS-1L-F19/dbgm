@@ -20,6 +20,7 @@ mod prelude {
 use self::prelude::*;
 use utils::ImageCache;
 use modals::{Modal, ChangeSetInfo, RemoveSource, confirm_changes::*};
+use widgets::CardOriginalInfo;
 
 pub struct GuiState<'a> {
     modal: Option<Modal>,
