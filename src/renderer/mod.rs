@@ -11,7 +11,7 @@ mod backend;
 
 use backend::*;
 
-type ColorFormat = gfx::format::Rgba8;
+type ColorFormat = gfx::format::Srgba8;
 
 pub struct System {
     pub events_loop: glutin::EventsLoop,

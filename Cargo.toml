@@ -31,6 +31,3 @@ bitflags = "1.2.1"
 git = "https://github.com/retep998/winapi-rs.git"
 branch = "0.3"
 features = ["shobjidl_core", "combaseapi", "objbase", "winnt"] 
-
-
-

@@ -41,6 +41,7 @@ impl RenderSystem {
             for col in 0..style.colors.len() {
                 style.colors[col] = imgui_gamma_to_linear(style.colors[col]);
             }
+            
         }
 
         let context = glutin::ContextBuilder::new().with_vsync(true);
