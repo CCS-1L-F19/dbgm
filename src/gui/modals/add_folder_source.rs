@@ -9,8 +9,9 @@ pub struct AddFolderSource { folder: Option<PathBuf>, name_buf: ImString }
 impl ModalInterface for AddFolderSource {
     fn id(&self) -> &str { "addfoldersource" }
     fn title(&self) -> &str { "Add source from folder..." }
-    fn display(mut self, ui: &Ui, state: &mut GuiState) {
-        let set = state.dbgm.background_set_mut().expect("Cannot add a source when no background set is open!");
+    fn display<T: Textures + ?Sized>(mut self, state: &mut GuiState, frame: Frame<T>) {
+        let Frame { ui, .. } = frame;
+        let set = state.set.as_mut().expect("Cannot add a source when no background set is open!");
 
         let display_folder = self.folder.deref().or(set.image_folder()).map(|f| f.to_string_lossy()).unwrap_or("(none)".into());
         ui.input_text(im_str!("Source folder"), &mut ImString::new(display_folder)).read_only(true).build();

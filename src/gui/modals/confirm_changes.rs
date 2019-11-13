@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use std::fmt::Debug;
 
 use super::ModalInterface;
@@ -17,7 +19,8 @@ pub struct ConfirmChanges {
 impl ModalInterface for ConfirmChanges {
     fn id(&self) -> &str { "confirmchanges" }
     fn title(&self) -> &str { "Confirm changes" }
-    fn display(mut self, ui: &Ui, state: &mut GuiState) {
+    fn display<T: Textures + ?Sized>(mut self, state: &mut GuiState, frame: Frame<T>) {
+        let Frame { ui, .. } = frame;
         if let Some(change) = self.changes.pop() {
             let result = match &change.kind {
                 ChangeKind::New => self.display_new(ui, state, &change.key),
@@ -27,7 +30,10 @@ impl ModalInterface for ConfirmChanges {
             };
 
             match result {
-                None => state.open_modal(self),
+                None => {
+                    self.changes.push(change);
+                    state.open_modal(self);
+                },
                 Some(result) => {
                     self.result_cache.put(&change.kind, result, true); // TODO: Allow remembering answers
                     self.changes.push(change);
@@ -44,7 +50,7 @@ impl ConfirmChanges {
     }
 
     pub fn apply_many(mut self, state: &mut GuiState) {
-        let set = state.dbgm.background_set_mut().expect("Cannot incorporate changes when no background set is open!");
+        let set = state.set.as_mut().expect("Cannot incorporate changes when no background set is open!");
         while let Some(change) = self.changes.pop() {
             println!("Change: {:?}", &change.kind);
             match self.result_cache.get(&change.kind) {

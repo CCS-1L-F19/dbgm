@@ -8,8 +8,9 @@ pub struct ChangeSetInfo { image_folder: Option<PathBuf>, name_buf: ImString }
 impl ModalInterface for ChangeSetInfo {
     fn id(&self) -> &str { "changesetinfo" }
     fn title(&self) -> &str { "Background set information" }
-    fn display(mut self, ui: &Ui, state: &mut GuiState) {
-        let set = state.dbgm.background_set_mut().expect("Cannot view set information when no background set is open!");
+    fn display<T: Textures + ?Sized>(mut self, state: &mut GuiState, frame: Frame<T>) {
+        let Frame { ui, .. } = frame;
+        let set = state.set.as_mut().expect("Cannot view set information when no background set is open!");
         ui.input_text(im_str!("Name"), &mut self.name_buf).flags(imgui::ImGuiInputTextFlags::CallbackResize).build();
         ui.new_line();
         

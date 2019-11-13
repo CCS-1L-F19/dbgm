@@ -60,6 +60,7 @@ pub trait UiExt {
     fn toggle_button_labeled(&self, id: &ImStr, text_on: &str, text_off: &str, pressed: &mut bool);
     fn small_toggle_button(&self, label: &ImStr, pressed: &mut bool) -> bool;
     fn move_cursor(&self, amount: [f32; 2]);
+    fn fullscreen_window(&self, title: &ImStr, contents: impl FnOnce());
 }
 
 impl<'ui> UiExt for Ui<'ui> {
@@ -121,6 +122,21 @@ impl<'ui> UiExt for Ui<'ui> {
         let cursor_pos = self.cursor_pos();
         self.set_cursor_pos([cursor_pos[0] + amount[0], cursor_pos[1] + amount[1]]);
     }
+
+    fn fullscreen_window(&self, id: &ImStr, contents: impl FnOnce()) {
+        let wr = self.push_style_var(StyleVar::WindowRounding(0.0));
+        Window::new(id)
+            .position([0.0, 0.0], Condition::FirstUseEver)
+            .size(self.io().display_size, Condition::Always)
+            .flags(WindowFlags::NO_TITLE_BAR | WindowFlags::NO_DECORATION | WindowFlags::NO_MOVE | WindowFlags::MENU_BAR)
+            .build(self, || {
+                let wr = self.push_style_var(StyleVar::WindowRounding(1.0));
+                contents();
+                wr.pop(self);
+            });
+        wr.pop(self);
+    }
+
 }
 
 pub trait ChildWindowExt: Sized {
@@ -148,4 +164,11 @@ pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
 pub fn fit_size(original: [f32; 2], bounds: [f32; 2]) -> [f32; 2] {
     let scale_factor = f32::min(bounds[0] / original[0], bounds[1] / original[1]);
     [original[0] * scale_factor, original[1] * scale_factor]
+}
+
+#[macro_export]
+macro_rules! reborrow_frame {
+    {$frame:ident} => {
+        Frame { ui: $frame.ui, resources: $frame.resources, textures: &mut *$frame.textures }
+    }
 }

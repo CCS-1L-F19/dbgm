@@ -18,7 +18,7 @@ pub use remove_source::RemoveSource;
 pub trait ModalInterface {
     fn id(&self) -> &str;
     fn title(&self) -> &str;
-    fn display(self, ui: &Ui, state: &mut GuiState);
+    fn display<T: Textures + ?Sized>(self, state: &mut GuiState, frame: Frame<T>);
     fn open_with<'ui, 'p>(&self, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
         modal.always_auto_resize(true)
     }
@@ -33,17 +33,18 @@ pub enum Modal {
     RemoveSource,
 }
 
-impl<'a> GuiState<'a> {
+impl GuiState {
     pub(super) fn open_modal(&mut self, modal: impl Into<Modal>) {
         self.modal = Some(modal.into());
     }
 
-    pub(super) fn check_modal(&mut self, ui: &Ui) {
+    pub(super) fn check_modal<T: Textures + ?Sized>(&mut self, frame: Frame<T>) {
+        let ui = frame.ui;
         if let Some(modal) = self.modal.take() {
             let id = im_str!("###{}", modal.id()).to_owned();
             if !ui.is_popup_open(&id) { ui.open_popup(&id); }
             let id_with_title = im_str!("{}###{}", modal.title(), id.to_str());
-            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| modal.display(ui, self));
+            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| modal.display(self, frame));
             match &self.modal {
                 Some(m) if im_str!("###{}", m.id()) != id => {
                     ui.close_current_popup();

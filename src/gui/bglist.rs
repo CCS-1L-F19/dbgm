@@ -24,35 +24,17 @@ impl Default for Filter {
     }
 }
 
-impl<'a> GuiState<'a> {
+impl GuiState {
     fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<(usize, Option<CardOriginalInfo>)>> {
-        use crate::sources::OriginalResult;
-        match self.dbgm.background_set_mut() {
+        match &mut self.set {
             Some(set) => {
                 let mut entries = (0..set.sources.len()).map(|_| Vec::new()).collect::<Vec<_>>();
                 let filter = &self.filter;
-                for (id, background) in set.backgrounds.iter_mut().enumerate().filter(|(_, b)| filter.should_display(b)) {
-                    let original = set.sources[background.source].original(&background.original);
-                    if let OriginalResult::Original(original) = original {
-                        if !self.image_cache.contains_image(&background.original) {
-                            if let Ok(image) = background.try_read_image_from(original) {
-                                self.image_cache.insert_image(background.original.clone(), image);
-                            }
-                        }
+                for id in 0..set.backgrounds.len() {
+                    let background = &set.backgrounds[id];
+                    if filter.should_display(&background) {
+                        entries[background.source].push((id, CardOriginalInfo::try_load(set, id, textures)))
                     }
-                    let original = match original {
-                        OriginalResult::Original(original) | OriginalResult::ContentMismatch(original) => {
-                            Some(CardOriginalInfo {
-                                texture: match self.image_cache.load_texture(&background.original, textures) {
-                                    Some(Ok(texture)) => Some(texture),
-                                    _ => None
-                                },
-                                location: original.location(),
-                            })
-                        },
-                        _ => None,
-                    };
-                    entries[background.source].push((id, original));
                 }
                 entries
             }
@@ -60,12 +42,13 @@ impl<'a> GuiState<'a> {
         }
     }
 
-    pub(super) fn draw_background_list<T: Textures + ?Sized>(&mut self, ui: &Ui, textures: &mut T) {
+    pub(super) fn draw_background_list<T: Textures + ?Sized>(&mut self, frame: Frame<T>) {
         let mut operation = None;
-        let entries = self.generate_background_entries(textures);
-        self.draw_list_header(ui);
+        let entries = self.generate_background_entries(frame.textures);
+        self.draw_list_header(reborrow_frame!(frame));
+        let Frame { ui, resources, .. } = frame;
         ChildWindow::new(im_str!("BackgroundList")).build(ui, || {
-            if let Some(set) = self.dbgm.background_set() {
+            if let Some(set) = &self.set {
                 for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
                     let header_pos = ui.cursor_pos();
                     if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).flags(ImGuiTreeNodeFlags::AllowItemOverlap).build() {
@@ -104,7 +87,7 @@ impl<'a> GuiState<'a> {
                             ]);
                             let card = BackgroundCard {
                                 id: imgui_id,
-                                resources: &self.resources,
+                                resources: &resources,
                                 background: &set.backgrounds[id],
                                 original,
                                 editable: true,
@@ -142,11 +125,11 @@ impl<'a> GuiState<'a> {
                         ImageButton::new(texture, [icon_size, icon_size]).frame_padding(0).build(ui)
                     };
 
-                    if toolbar_button(self.resources.reload_small.id, 1.15) {
+                    if toolbar_button(resources.reload_small.id, 1.15) {
                         operation = Some(Operation::ReloadSource(i));
                     }
 
-                    if toolbar_button(self.resources.blue_x.id, 1.0) {
+                    if toolbar_button(resources.blue_x.id, 1.0) {
                         operation = Some(Operation::RemoveSource(i));
                     }
 
@@ -155,10 +138,11 @@ impl<'a> GuiState<'a> {
                 }
             }
         });
-        operation.map(|op| op.apply(self));
+        operation.map(|op| self.apply(op));
     }
     
-    fn draw_list_header(&mut self, ui: &Ui) {
+    fn draw_list_header<T: ?Sized>(&mut self, frame: Frame<T>) {
+        let Frame { ui, resources, .. } = frame;
         let style = ui.clone_style();
         let header_text = im_str!("Background sources");
         let text_height = ui.calc_text_size(header_text, false, -1.0)[1];
@@ -180,12 +164,12 @@ impl<'a> GuiState<'a> {
                     (StyleColor::ButtonActive, [0.0, 0.0, 0.0, 0.0]),
                     (StyleColor::ButtonHovered, [0.0, 0.0, 0.0, 0.0]),
                 ]);
-                ImageDropdown::new(im_str!("FilterBackgrounds"), self.resources.filter.id, [height, height]).frame_padding(0).build(ui, || {
+                ImageDropdown::new(im_str!("FilterBackgrounds"), resources.filter.id, [height, height]).frame_padding(0).build(ui, || {
                     ui.checkbox(im_str!("Show edited"), &mut self.filter.show_edited);
                     ui.checkbox(im_str!("Show excluded"), &mut self.filter.show_excluded);
                 });
                 ui.same_line(0.0);
-                ImageDropdown::new(im_str!("AddSource"), self.resources.blue_plus.id, [height, height]).frame_padding(0).build(ui, || {
+                ImageDropdown::new(im_str!("AddSource"), resources.blue_plus.id, [height, height]).frame_padding(0).build(ui, || {
                     if Selectable::new(im_str!("From folder...")).build(ui) {
                         ui.close_current_popup();
                         self.open_modal(AddFolderSource::new());

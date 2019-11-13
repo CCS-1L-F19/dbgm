@@ -1,25 +1,27 @@
 use super::ModalInterface;
 use crate::gui::prelude::*;
 
-use widgets::BackgroundGrid;
+use widgets::{BackgroundGrid, CardOriginalInfo};
 
 pub struct RemoveSource(pub usize);
 impl ModalInterface for RemoveSource {
     fn id(&self) -> &str { "removesource" }
     fn title(&self) -> &str { "Confirm source removal" }
-    fn display(self, ui: &Ui, state: &mut GuiState) { 
-        let set = state.dbgm.background_set_mut().expect("Cannot remove a source when no background set is open!");
+    fn display<T: Textures + ?Sized>(self, state: &mut GuiState, frame: Frame<T>) { 
+        let Frame { ui, .. } = frame;
+        let set = state.set.as_mut().expect("Cannot remove a source when no background set is open!");
         let source = &set.sources[self.0];
         ui.text(format!("Are you sure you want to remove the source '{}'?", source.name()));
         ui.text("If you click Remove, the following backgrounds will be permanently removed from the set:");
 
-        let backgrounds = set.backgrounds.iter_mut().filter(|b| b.source == self.0).map(|b| {
-            state.load_background
-        })
+        let entries = (0..set.backgrounds.len()).filter_map(|id| {
+            if set.backgrounds[id].source != self.0 { return None };
+            Some((id, CardOriginalInfo::try_load(set, id, frame.textures)))
+        }).collect::<Vec<_>>();
 
         let grid = BackgroundGrid {
             id: &im_str!("AffectedBackgrounds"),
-            entries: unimplemented!(),
+            entries,
             card_width: unimplemented!(),
             max_dimensions: [5, 7],
         };

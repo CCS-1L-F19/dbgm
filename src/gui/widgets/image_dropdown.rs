@@ -1,3 +1,4 @@
+#![allow(unused_mut)]
 use crate::gui::prelude::*;
 
 /// Builder for an image button widget
