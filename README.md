@@ -9,7 +9,7 @@ In its unfinished state, the only way to install `dbgm` is to build it locally. 
 2. Once Rust is installed, clone this repository:
 
     ```
-    git clone https://github.com/CCS-F19-1L/dbgm.git
+    git clone https://github.com/CCS-1L-F19/dbgm.git
     cd dbgm
     ```
 
