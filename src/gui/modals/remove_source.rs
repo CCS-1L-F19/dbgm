@@ -16,7 +16,7 @@ impl ModalInterface for RemoveSource {
         let textures = &mut *frame.textures;
         let affected_backgrounds = set.backgrounds.indices().collect::<Vec<_>>().into_iter().filter_map(|id| {
             if set.backgrounds[id].source != self.0 { return None };
-            Some((id, CardOriginalInfo::try_load(set, id, textures)))
+            Some((id, CardOriginalInfo::try_load_from_set(set, id, textures)))
         }).collect::<Vec<_>>();
        
         if !affected_backgrounds.is_empty() {
@@ -27,7 +27,7 @@ impl ModalInterface for RemoveSource {
                 id: &im_str!("AffectedBackgrounds"),
                 entries: affected_backgrounds,
                 card_width: card_width,
-                max_size: AUTO_SIZE,
+                max_size: [0.0, (ui.io().display_size[1] * 2.0 / 3.0) - (ui.window_content_region_min()[1] - ui.cursor_pos()[1])],
             };
             ui.center_h(grid.size(ui)[0]);
             grid.draw(set, reborrow_frame!(frame));

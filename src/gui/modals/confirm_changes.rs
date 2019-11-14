@@ -9,6 +9,22 @@ use crate::{
     background::{BackgroundSet, DesktopBackground, DesktopBackgroundFlags},
 };
 
+use widgets::{BackgroundCard, BackgroundGrid, CardOriginalInfo};
+
+const ALTERED_DESCRIPTION: &'static str = "\
+    If you choose Accept Change, these backgrounds will be marked as unedited and use the new original.\
+    If you choose Reject Change, these backgrounds will remain as they are, but will be marked as \
+    missing an original, and become unable to be edited.";
+
+const DELETED_DESCRIPTION: &'static str = "\
+    If you choose Remove, these backgrounds will be deleted from the library. \
+    If you choose Don't Remove, these backgrounds will remain in the library, but will be marked as \
+    missing an original, and will not be able to be edited.";
+
+const UNAVAILABLE_DESCRIPTION: &'static str = "\
+    The original associated with the following backgrounds cannot be accessed. This condition may be temporary\
+    or permanent. You will not be able to edit any of the backgrounds until the original becomes available again.";
+
 pub struct ConfirmChanges { 
     source: usize, 
     changes: Vec<OriginalChange>,
@@ -19,14 +35,30 @@ pub struct ConfirmChanges {
 impl ModalInterface for ConfirmChanges {
     fn id(&self) -> &str { "confirmchanges" }
     fn title(&self) -> &str { "Confirm changes" }
+
+    fn open_with<'ui, 'p>(&self, ui: &'ui Ui, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
+        let modal = modal.always_auto_resize(true);
+        let style = ui.clone_style();
+        let max_content_width = (ui.io().display_size[0] / 2.0) - 2.0 * (style.window_border_size + style.window_padding[0]);
+        match self.changes.last().map(|c| &c.kind) {
+            Some(ChangeKind::Altered) => 
+                modal.size([ui.calc_text_size(&im_str!("{}", ALTERED_DESCRIPTION), false, max_content_width)[0], 0.0]),
+            Some(ChangeKind::Deleted) => 
+                modal.size([ui.calc_text_size(&im_str!("{}", DELETED_DESCRIPTION), false, max_content_width)[0], 0.0]),
+            _ => modal,
+        }
+    }
+    
     fn display<T: Textures + ?Sized>(mut self, state: &mut GuiState, frame: Frame<T>) {
-        let Frame { ui, .. } = frame;
+        let ui = frame.ui;
         if let Some(change) = self.changes.pop() {
+            let frame2 = reborrow_frame!(frame);
+            let set = state.set.as_mut().expect("Cannot confirm changes when no set is open!");
             let result = match &change.kind {
-                ChangeKind::New => self.display_new(ui, state, &change.key),
-                ChangeKind::Altered => self.display_altered(ui, state, &change.key),
-                ChangeKind::Deleted => self.display_deleted(ui, state, &change.key),
-                ChangeKind::Unavailable(cause) => self.display_unavailable(ui, state, &change.key, &cause),
+                ChangeKind::New => self.display_new(set, frame2, &change.key),
+                ChangeKind::Altered => self.display_altered(set, frame2, &change.key),
+                ChangeKind::Deleted => self.display_deleted(set, frame2, &change.key),
+                ChangeKind::Unavailable(cause) => self.display_unavailable(set, frame2, &change.key, &cause),
             };
 
             match result {
@@ -98,14 +130,31 @@ impl ConfirmChanges {
         }
     }
 
-    fn display_altered(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
+    fn display_affected<T: Textures + ?Sized>(set: &mut ActiveSet, frame: Frame<T>, key: &OriginalKey) {
+        let ui = frame.ui;
+        let affected_backgrounds = set.backgrounds.indices().collect::<Vec<_>>().into_iter().filter_map(|id| {
+            if set.backgrounds[id].original.compare(key) == KeyRelation::Distinct { return None };
+            Some((id, CardOriginalInfo::try_load_from_set(set, id, &mut *frame.textures)))
+        }).collect::<Vec<_>>();
+
+        let grid = BackgroundGrid {
+            id: &im_str!("AffectedBackgrounds"),
+            entries: affected_backgrounds,
+            card_width: ui.current_font_size() * 25.0, // TODO: Is there a less arbitrary choice here
+            max_size: [0.0, (ui.io().display_size[1] * 2.0 / 3.0) - (ui.window_content_region_min()[1] - ui.cursor_pos()[1])],
+        };
+        ui.center_avail_h(grid.size(ui)[0]);
+        grid.draw(set, reborrow_frame!(frame));
+    }
+
+    fn display_altered<T: Textures + ?Sized>(&mut self, set: &mut ActiveSet, frame: Frame<T>, key: &OriginalKey) -> Option<ChangeResult> {
+        let ui = frame.ui;
+
         ui.text("The content of the original associated with the following backgrounds has changed:");
-        //TODO: Show backgrounds here
-        ui.text("\
-            If you choose Accept Change, these backgrounds will be marked as unedited and use the new original.\
-            If you choose Reject Change, these backgrounds will remain as they are, but will be marked as \
-            missing an original, and become unable to be edited.
-        ");
+        ui.spacing();
+        ConfirmChanges::display_affected(set, reborrow_frame!(frame), key);
+        ui.spacing();
+        ui.text_wrapped(&im_str!("{}", ALTERED_DESCRIPTION));
 
         if ui.button(im_str!("Accept Change"), AUTO_SIZE) { return Some(ChangeResult::Accept); }
         ui.same_line(0.0);
@@ -113,14 +162,14 @@ impl ConfirmChanges {
         None
     }
 
-    fn display_deleted(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
+    fn display_deleted<T: Textures + ?Sized>(&mut self, set: &mut ActiveSet, frame: Frame<T>, key: &OriginalKey) -> Option<ChangeResult> {
+        let ui = frame.ui;
+        
         ui.text("The original associated with the following backgrounds no longer exists:");
-        // TODO: Show backgrounds here
-        ui.text("\
-            If you choose Remove, these backgrounds will be deleted from the library. \
-            If you choose Don't Remove, these backgrounds will remain in the library, but will be marked as \
-            missing an original, and will not be able to be edited.
-        ");
+        ui.spacing();
+        ConfirmChanges::display_affected(set, reborrow_frame!(frame), key);
+        ui.spacing();
+        ui.text_wrapped(&im_str!("{}", DELETED_DESCRIPTION));
 
         if ui.button(im_str!("Remove"), AUTO_SIZE) { return Some(ChangeResult::Accept); }
         ui.same_line(0.0);
@@ -128,12 +177,14 @@ impl ConfirmChanges {
         None
     }
 
-    fn display_unavailable(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey, cause: &dyn Debug) -> Option<ChangeResult> {
-        ui.text("\
-            The original associated with the following backgrounds cannot be accessed. This condition may be temporary\
-            or permanent. You will not be able to edit any of the backgrounds until the original becomes available again.
-        ");
-        // TODO: Show backgrounds here
+    fn display_unavailable<T: Textures + ?Sized>(&mut self, set: &mut ActiveSet, frame: Frame<T>, key: &OriginalKey, cause: &dyn Debug) -> Option<ChangeResult> {
+        let ui = frame.ui;
+        
+        ui.text_wrapped(&im_str!("{}", UNAVAILABLE_DESCRIPTION));
+        ui.spacing();
+        ConfirmChanges::display_affected(set, reborrow_frame!(frame), key);
+        ui.spacing();
+
         if ui.button(im_str!("OK"), AUTO_SIZE) { return Some(ChangeResult::Accept); }
         ui.same_line(0.0);
         ui.toggle_button_labeled(&im_str!("ShowDetails"), "Hide Error Details", "Show Error Details", &mut self.show_error_details);
@@ -144,9 +195,27 @@ impl ConfirmChanges {
         None
     }
 
-    fn display_new(&mut self, ui: &Ui, state: &mut GuiState, key: &OriginalKey) -> Option<ChangeResult> {
+    fn display_new<T: Textures + ?Sized>(&mut self, set: &mut ActiveSet, frame: Frame<T>, key: &OriginalKey) -> Option<ChangeResult> {
+        let Frame { ui, resources, textures } = frame;
+        
+        let original = set.set.sources[self.source].original(&key);
+        let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
+        let mut background = DesktopBackground::from_original(self.source, key.clone(), original);
+
         ui.text("A new background is available. Would you like to add it to the library?");
-        //TODO: Show background here
+        ui.spacing();
+        let card_width = ui.current_font_size() * 25.0;
+        let card = BackgroundCard {
+            id: im_str!("NewBackground"),
+            resources: resources,
+            original: Some(CardOriginalInfo::load(&mut background, original, &mut set.image_cache, textures)),
+            background: &background,
+            editable: false,
+            width: card_width,
+        };
+        ui.center_avail_h(card_width);
+        card.draw(ui);
+        ui.spacing();
 
         if ui.button(im_str!("Add"), AUTO_SIZE) { return Some(ChangeResult::Accept); }
         ui.same_line(0.0);

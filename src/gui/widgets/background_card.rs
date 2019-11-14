@@ -1,13 +1,14 @@
 use crate::gui::prelude::*;
-use crate::background::{DesktopBackground, DesktopBackgroundFlags};
-use crate::sources::OriginalResult;
+use crate::background::{DesktopBackground, DesktopBackgroundFlags, Original};
+use crate::sources::{OriginalResult, OriginalKey};
 
 const ICON_SIZE: [f32; 2] = [16.0, 16.0];
 
 pub struct CardOriginalInfo { pub texture: Option<Texture>, pub location: String }
 
+// TODO: See about deduplicating some of the code in these two functions. There's only a slight semantic difference.
 impl CardOriginalInfo {
-    pub fn try_load<T: Textures + ?Sized>(set: &mut ActiveSet, id: usize, textures: &mut T) -> Option<CardOriginalInfo> {
+    pub fn try_load_from_set<T: Textures + ?Sized>(set: &mut ActiveSet, id: usize, textures: &mut T) -> Option<CardOriginalInfo> {
         let ActiveSet { set, image_cache } = set;
         let background = &mut set.backgrounds[id];
         let original = set.sources[background.source].original(&background.original);
@@ -29,6 +30,26 @@ impl CardOriginalInfo {
                 })
             },
             _ => None,
+        }
+    }
+
+    pub fn load<T: Textures + ?Sized>(
+        background: &mut DesktopBackground,
+        original: &dyn Original, 
+        image_cache: &mut ImageCache<OriginalKey>, 
+        textures: &mut T
+    ) -> CardOriginalInfo {
+        if !image_cache.contains_image(&background.original) {
+            if let Ok(image) = background.try_read_image_from(original) {
+                image_cache.insert_image(background.original.clone(), image);
+            }
+        }
+        CardOriginalInfo {
+            texture: match image_cache.load_texture(&background.original, textures) {
+                Some(Ok(texture)) => Some(texture),
+                _ => None
+            },
+            location: original.location(),
         }
     }
 }

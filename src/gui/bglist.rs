@@ -34,7 +34,7 @@ impl GuiState {
                 for id in set.backgrounds.indices().collect::<Vec<_>>() {
                     let background = &set.backgrounds[id];
                     if filter.should_display(&background) {
-                        entries.entry(background.source).or_insert_with(|| Vec::new()).push((id, CardOriginalInfo::try_load(set, id, textures)));
+                        entries.entry(background.source).or_insert_with(|| Vec::new()).push((id, CardOriginalInfo::try_load_from_set(set, id, textures)));
                     }
                 }
                 entries

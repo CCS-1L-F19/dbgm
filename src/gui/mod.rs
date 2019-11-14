@@ -14,6 +14,7 @@ mod prelude {
     pub(in super) use super::resources::GuiResources;
     pub(in super) use super::state::{GuiState, Operation, ActiveSet};
     pub(in super) use super::utils::{UiExt, ImageCache, AUTO_SIZE};
+    pub(in super) use super::widgets::PopupModal2 as PopupModal;
     pub(in super) use super::draw::Frame;
 }
 

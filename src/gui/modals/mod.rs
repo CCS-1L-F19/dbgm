@@ -19,7 +19,7 @@ pub trait ModalInterface {
     fn id(&self) -> &str;
     fn title(&self) -> &str;
     fn display<T: Textures + ?Sized>(self, state: &mut GuiState, frame: Frame<T>);
-    fn open_with<'ui, 'p>(&self, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
+    fn open_with<'ui, 'p>(&self, ui: &'ui Ui, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
         modal.always_auto_resize(true)
     }
 }
@@ -44,7 +44,7 @@ impl GuiState {
             let id = im_str!("###{}", modal.id()).to_owned();
             if !ui.is_popup_open(&id) { ui.open_popup(&id); }
             let id_with_title = im_str!("{}###{}", modal.title(), id.to_str());
-            modal.open_with(PopupModal::new(ui, &id_with_title)).build(|| modal.display(self, frame));
+            modal.open_with(ui, PopupModal::new(ui, &id_with_title)).build(ui, || modal.display(self, frame));
             match &self.modal {
                 Some(m) if im_str!("###{}", m.id()) != id => {
                     ui.close_current_popup();

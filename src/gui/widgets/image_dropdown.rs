@@ -1,4 +1,4 @@
-#![allow(unused_mut)]
+#![allow(unused_mut, dead_code)]
 use crate::gui::prelude::*;
 
 /// Builder for an image button widget
@@ -21,7 +21,7 @@ impl<'a> ImageDropdown<'a> {
     }
 
     fn map<T>(self, f: fn(ImageButton, T) -> ImageButton, param: T) -> ImageDropdown<'a> {
-        ImageDropdown { id: self.id, size: self.size, button: f(self.button, param) }
+        ImageDropdown { button: f(self.button, param), ..self }
     }
 
     /// Sets the image button size
@@ -62,7 +62,7 @@ impl<'a> ImageDropdown<'a> {
             ui.open_popup(self.id);
         }
         unsafe {
-            imgui::sys::igSetNextWindowPos(bottom_right.into(), Condition::Always as i32, [1.0, 0.0].into());
+            sys::igSetNextWindowPos(bottom_right.into(), Condition::Always as i32, [1.0, 0.0].into());
         }
         ui.popup(self.id, dropdown);
     }
