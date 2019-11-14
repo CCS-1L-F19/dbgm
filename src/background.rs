@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use image::{self, ImageResult, DynamicImage, GenericImageView};
 use crate::{sources::*, utils::{OptionExt as _, MaybeStale}};
 use bitflags::bitflags;
+use stable_vec::StableVec;
 
 #[derive(Clone)]
 pub struct DesktopBackground {
@@ -70,18 +71,18 @@ bitflags! {
 
 pub struct BackgroundSet {
     image_folder: Option<PathBuf>,
-    pub(crate) sources: Vec<Box<dyn ErasedDesktopBackgroundSource>>,
     name: Option<String>,
-    pub(crate) backgrounds: Vec<DesktopBackground>,
+    pub(crate) backgrounds: StableVec<DesktopBackground>,
+    pub(crate) sources: StableVec<Box<dyn ErasedDesktopBackgroundSource>>,
 }
 
 impl BackgroundSet {
     pub fn new() -> BackgroundSet {
         BackgroundSet {
             image_folder: None,
-            sources: Vec::new(),
             name: None,
-            backgrounds: Vec::new(),
+            backgrounds: StableVec::new(),
+            sources: StableVec::new(),
         }
     }
 
@@ -102,8 +103,12 @@ impl BackgroundSet {
     }
 
     pub fn add_source<S: for<'a> DesktopBackgroundSource<'a> + 'static>(&mut self, source: S) -> usize {
-        self.sources.push(Box::new(source));
-        self.sources.len() - 1
+        self.sources.push(Box::new(source))
+    }
+
+    pub fn remove_source(&mut self, source: usize) {
+        self.backgrounds.retain(|b| b.source != source);
+        self.sources.remove(source);
     }
 }
 

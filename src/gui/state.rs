@@ -84,7 +84,7 @@ impl GuiState {
 
     // TODO: Support multiple selection?
     pub(in super) fn select_background(&mut self, background: usize) {
-        assert!(self.set.as_ref().map(|b| background < b.backgrounds.len()).unwrap_or(false));
+        assert!(self.set.as_ref().map(|b| b.backgrounds.has_element_at(background)).unwrap_or(false));
         self.selected_background = if self.selected_background != Some(background) { Some(background) } else { None }
     }
 

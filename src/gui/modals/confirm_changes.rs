@@ -70,14 +70,13 @@ impl ConfirmChanges {
             (ChangeKind::New, result) => {
                 let original = set.sources[self.source].original(&key);
                 let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
-                let new_id = set.backgrounds.len();
-                set.backgrounds.push(DesktopBackground::from_original(self.source, key, original));
+                let new_id = set.backgrounds.push(DesktopBackground::from_original(self.source, key, original));
                 if result == ChangeResult::Reject { 
                     set.backgrounds[new_id].flags.set(DesktopBackgroundFlags::EXCLUDED, true);
                 }
             },
             (ChangeKind::Altered, ChangeResult::Accept) => {
-                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
+                for background in set.backgrounds.values_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
                     let original = set.sources[self.source].original(&key);
                     let original = if let OriginalResult::Original(o) = original { o } else { panic!("Got an invalid key from reload!"); };
                     background.update_from(key.clone(), original);
@@ -87,12 +86,12 @@ impl ConfirmChanges {
                 set.backgrounds.retain(|b| b.original.compare(&key) == KeyRelation::Distinct) 
             },
             (ChangeKind::Deleted, ChangeResult::Reject) | (ChangeKind::Altered, ChangeResult::Reject) => {
-                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
+                for background in set.backgrounds.values_mut().filter(|b| b.original.compare(&key) != KeyRelation::Distinct) {
                     background.flags.insert(DesktopBackgroundFlags::ORIGINAL_MISSING);
                 }
             },
             (ChangeKind::Unavailable(_), _) => { 
-                for background in set.backgrounds.iter_mut().filter(|b| b.original.compare(&key) == KeyRelation::SameOriginal) {
+                for background in set.backgrounds.values_mut().filter(|b| b.original.compare(&key) == KeyRelation::SameOriginal) {
                     background.flags.insert(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE);
                 }
             },

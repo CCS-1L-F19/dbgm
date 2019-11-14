@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::gui::prelude::*;
 use modals::AddFolderSource;
 use widgets::*;
@@ -25,20 +26,20 @@ impl Default for Filter {
 }
 
 impl GuiState {
-    fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> Vec<Vec<(usize, Option<CardOriginalInfo>)>> {
+    fn generate_background_entries<T: Textures + ?Sized>(&mut self, textures: &mut T) -> HashMap<usize, Vec<(usize, Option<CardOriginalInfo>)>> {
         match &mut self.set {
             Some(set) => {
-                let mut entries = (0..set.sources.len()).map(|_| Vec::new()).collect::<Vec<_>>();
+                let mut entries = HashMap::new();
                 let filter = &self.filter;
-                for id in 0..set.backgrounds.len() {
+                for id in set.backgrounds.indices().collect::<Vec<_>>() {
                     let background = &set.backgrounds[id];
                     if filter.should_display(&background) {
-                        entries[background.source].push((id, CardOriginalInfo::try_load(set, id, textures)))
+                        entries.entry(background.source).or_insert_with(|| Vec::new()).push((id, CardOriginalInfo::try_load(set, id, textures)));
                     }
                 }
                 entries
             }
-            None => Vec::new()
+            None => HashMap::new()
         }
     }
 
@@ -49,9 +50,9 @@ impl GuiState {
         let Frame { ui, resources, .. } = frame;
         ChildWindow::new(im_str!("BackgroundList")).build(ui, || {
             if let Some(set) = &self.set {
-                for (i, bgs) in entries.into_iter().enumerate().filter(|(_, bgs)| !bgs.is_empty()) {
+                for (source, bgs) in entries.into_iter().filter(|(_, bgs)| !bgs.is_empty()) {
                     let header_pos = ui.cursor_pos();
-                    if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[i].name(), i)).flags(ImGuiTreeNodeFlags::AllowItemOverlap).build() {
+                    if ui.collapsing_header(&im_str!("{}###Source{}", set.sources[source].name(), source)).flags(ImGuiTreeNodeFlags::AllowItemOverlap).build() {
                         for (id, original) in bgs.into_iter() {
                             let imgui_id = &im_str!("##Background{}", id);
                             let cursor_pos = ui.cursor_pos();
@@ -126,11 +127,11 @@ impl GuiState {
                     };
 
                     if toolbar_button(resources.reload_small.id, 1.15) {
-                        operation = Some(Operation::ReloadSource(i));
+                        operation = Some(Operation::ReloadSource(source));
                     }
 
                     if toolbar_button(resources.blue_x.id, 1.0) {
-                        operation = Some(Operation::RemoveSource(i));
+                        operation = Some(Operation::RemoveSource(source));
                     }
 
                     bcol.pop(ui);

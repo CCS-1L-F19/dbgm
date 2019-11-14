@@ -20,4 +20,3 @@ mod prelude {
 pub use draw::{draw_state, Frame};
 pub use state::GuiState;
 pub use resources::GuiResources;
-

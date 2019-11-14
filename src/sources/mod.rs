@@ -42,10 +42,19 @@ impl<O> OriginalResult<O> {
     fn map<T>(self, f: impl FnOnce(O) -> T) -> OriginalResult<T> {
         use OriginalResult::*;
         match self {
-            Original(o) => Original(f(o)),
-            ContentMismatch(o) => ContentMismatch(f(o)),
-            WrongSource => WrongSource,
-            NotFound => NotFound,
+            OriginalResult::Original(o) => Original(f(o)),
+            OriginalResult::ContentMismatch(o) => ContentMismatch(f(o)),
+            OriginalResult::WrongSource => WrongSource,
+            OriginalResult::NotFound => NotFound,
+        }
+    }
+
+    pub fn as_option(self) -> Option<O> {
+        match self {
+            OriginalResult::Original(o) => Some(o),
+            OriginalResult::ContentMismatch(o) => Some(o),
+            OriginalResult::WrongSource => None,
+            OriginalResult::NotFound => None,
         }
     }
 }
