@@ -5,6 +5,8 @@ use glutin::{Event, WindowEvent};
 use imgui::{Context, FontConfig, FontSource, Ui, TextureId};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
+use crate::math::Vec2;
+
 #[cfg_attr(feature = "opengl", path = "gl.rs")]
 #[cfg_attr(feature = "directx", path = "dx.rs")]
 mod backend;
@@ -119,7 +121,7 @@ impl System {
 #[derive(Copy, Clone)]
 pub struct Texture {
     pub id: TextureId,
-    pub size: [f32; 2],
+    pub size: Vec2,
 }
 
 pub trait Textures {

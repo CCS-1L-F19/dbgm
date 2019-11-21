@@ -7,6 +7,7 @@ mod background;
 mod sources;
 mod gui;
 mod utils;
+mod math;
 
 use utils::check_result;
 

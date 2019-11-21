@@ -141,9 +141,9 @@ impl ConfirmChanges {
             id: &im_str!("AffectedBackgrounds"),
             entries: affected_backgrounds,
             card_width: ui.current_font_size() * 25.0, // TODO: Is there a less arbitrary choice here
-            max_size: [0.0, (ui.io().display_size[1] * 2.0 / 3.0) - (ui.window_content_region_min()[1] - ui.cursor_pos()[1])],
+            max_size: [0.0, (ui.io().display_size[1] * 2.0 / 3.0) - (ui.window_content_region_min()[1] - ui.cursor_pos()[1])].into(),
         };
-        ui.center_avail_h(grid.size(ui)[0]);
+        ui.center_avail_h(grid.size(ui).x);
         grid.draw(set, reborrow_frame!(frame));
     }
 

@@ -123,7 +123,7 @@ impl<'a> Textures for GfxGlTextures<'a> {
         );
 
         let id = self.textures.insert((srv, sampler));
-        Ok(Texture { id, size: [width as f32, height as f32] })
+        Ok(Texture { id, size: [width as f32, height as f32].into() })
     }
 
     /*

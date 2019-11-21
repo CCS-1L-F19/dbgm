@@ -6,17 +6,18 @@ use crate::gui::prelude::*;
 #[must_use]
 pub struct ImageDropdown<'a> {
     id: &'a ImStr,
-    size: [f32; 2],
+    size: Vec2,
     button: ImageButton
 }
 
 impl<'a> ImageDropdown<'a> {
     /// Creates a new image button builder with the given texture and size
-    pub fn new(id: &ImStr, texture_id: TextureId, size: [f32; 2]) -> ImageDropdown {
+    pub fn new(id: &ImStr, texture_id: TextureId, size: impl Into<Vec2>) -> ImageDropdown {
+        let size = size.into();
         ImageDropdown {
             id: id,
             size: size,
-            button: ImageButton::new(texture_id, size),
+            button: ImageButton::new(texture_id, size.into()),
         }
     }
 
@@ -54,10 +55,7 @@ impl<'a> ImageDropdown<'a> {
     }
     /// Builds the image button
     pub fn build(self, ui: &Ui, dropdown: impl FnOnce()) {
-        let bottom_right = [
-            ui.window_pos()[0] + ui.cursor_pos()[0] + self.size[0],
-            ui.window_pos()[1] + ui.cursor_pos()[1] + self.size[1]
-        ];
+        let bottom_right = self.size + ui.window_pos() + ui.cursor_pos();
         if self.button.build(ui) {
             ui.open_popup(self.id);
         }

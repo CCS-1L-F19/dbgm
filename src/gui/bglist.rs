@@ -58,7 +58,7 @@ impl GuiState {
                             let cursor_pos = ui.cursor_pos();
                             let alpha = ui.push_style_var(StyleVar::Alpha(0.0));
                             // This is a dummy element for us to check the hover state of.
-                            Selectable::new(imgui_id).size(BackgroundCard::size(ui, 0.0)).build(ui);
+                            Selectable::new(imgui_id).size(BackgroundCard::size(ui, 0.0).into()).build(ui);
                             alpha.pop(ui);
                             ui.set_cursor_pos(cursor_pos);
 

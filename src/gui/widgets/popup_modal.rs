@@ -6,7 +6,7 @@ use imgui::PopupModal;
 
 pub struct PopupModal2<'ui, 'p> {
     inner: PopupModal<'ui, 'p>,
-    size: Option<[f32; 2]>
+    size: Option<Vec2>
 }
 
 impl<'ui, 'p> PopupModal2<'ui, 'p> {
@@ -75,18 +75,18 @@ impl<'ui, 'p> PopupModal2<'ui, 'p> {
         self.map(PopupModal::always_use_window_padding, value)
     }
 
-    pub fn size(mut self, size: [f32; 2]) -> Self {
-        self.size = Some(size);
+    pub fn size(mut self, size: impl Into<Vec2>) -> Self {
+        self.size = Some(size.into());
         self.always_auto_resize(false).resizable(false)
     }
 
     /// Consume and draw the PopupModal.
     pub fn build<F: FnOnce()>(self, ui: &'ui Ui, f: F) {
         if let Some(size) = self.size {
-            let display_size = ui.io().display_size;
+            let display_size: Vec2 = ui.io().display_size.into();
             unsafe {
                 sys::igSetNextWindowSize(size.into(), Condition::Always as i32);
-                sys::igSetNextWindowPos([display_size[0] / 2.0, display_size[1] / 2.0].into(), Condition::Always as i32, [0.5, 0.5].into());
+                sys::igSetNextWindowPos((display_size / 2.0).into(), Condition::Always as i32, [0.5, 0.5].into());
             }
         }
         self.inner.build(f)

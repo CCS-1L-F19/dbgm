@@ -5,9 +5,11 @@ use std::path::PathBuf;
 use imgui::*;
 
 use crate::renderer::{Textures, Texture};
+use crate::math::Vec2;
 use super::modals::ErrorModal;
 
 pub const AUTO_SIZE: [f32; 2] = [0.0, 0.0];
+pub const IMAGE_BORDER_WIDTH: f32 = 2.0;
 
 pub struct ImageCache<K: Hash + Eq> {
     images: HashMap<K, (image::DynamicImage, Option<Texture>)>,
@@ -120,7 +122,7 @@ impl<'ui> UiExt for Ui<'ui> {
 
     fn move_cursor(&self, amount: [f32; 2]) {
         let cursor_pos = self.cursor_pos();
-        self.set_cursor_pos([cursor_pos[0] + amount[0], cursor_pos[1] + amount[1]]);
+        self.set_cursor_pos((Vec2::from(cursor_pos) + Vec2::from(amount)).into());
     }
 
     fn fullscreen_window(&self, id: &ImStr, contents: impl FnOnce()) {
@@ -146,7 +148,7 @@ pub trait ChildWindowExt: Sized {
 impl<'a> ChildWindowExt for ChildWindow<'a> {
     fn border_box(self, ui: &Ui, size: [f32; 2]) -> Self {
         let border_size = ui.clone_style().child_border_size;
-        self.size([f32::max(0.0, size[0] - border_size), f32::max(0.0, size[1] - border_size)])
+        self.size(Vec2::max([0.0, 0.0], Vec2::from(size) - [border_size, border_size]).into())
     }
 }
 
@@ -161,9 +163,9 @@ pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
     }
 }
 
-pub fn fit_size(original: [f32; 2], bounds: [f32; 2]) -> [f32; 2] {
-    let scale_factor = f32::min(bounds[0] / original[0], bounds[1] / original[1]);
-    [original[0] * scale_factor, original[1] * scale_factor]
+pub fn fit_size(original: impl Into<Vec2>, bounds: impl Into<Vec2>) -> Vec2 {
+    let (original, bounds) = (original.into(), bounds.into());
+    original * f32::min(bounds.x / original.x, bounds.y / original.y)
 }
 
 #[macro_export]

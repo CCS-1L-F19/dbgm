@@ -64,11 +64,11 @@ pub struct BackgroundCard<'i, 'c> {
 }
 
 impl<'i, 'c> BackgroundCard<'i, 'c> {
-    pub fn size(ui: &Ui, custom_width: f32) -> [f32; 2] {
+    pub fn size(ui: &Ui, custom_width: f32) -> Vec2 {
         let style = ui.clone_style();
         let non_content = style.window_padding[1] + style.window_border_size;
         let line = ui.current_font_size() + style.item_spacing[1];
-        [custom_width, non_content * 2.0 + line * 2.0 + ICON_SIZE[1]]
+        [custom_width, non_content * 2.0 + line * 2.0 + ICON_SIZE[1]].into()
     }
 
     pub fn draw(self, ui: &Ui) -> DesktopBackgroundFlags {
@@ -77,7 +77,7 @@ impl<'i, 'c> BackgroundCard<'i, 'c> {
         let original = original.as_ref();
         ChildWindow::new(id)
             .border(true)
-            .size(BackgroundCard::size(ui, width))
+            .size(BackgroundCard::size(ui, width).into())
             .build(ui, || {
                 ui.set_cursor_pos(ui.window_content_region_min());
                 ui.columns(2, im_str!("Columns"), true);
@@ -86,8 +86,8 @@ impl<'i, 'c> BackgroundCard<'i, 'c> {
                 ui.set_current_column_width(max_height + ui.clone_style().window_padding[1] * 2.0); // no idea
                 let texture = original.and_then(|o| o.texture).unwrap_or(resources.missing_image);
                 let dimensions = utils::fit_size(texture.size, [max_height, max_height]);
-                ui.center_avail_v(dimensions[1]);
-                Image::new(texture.id, dimensions).build(ui);
+                ui.center_avail_v(dimensions.y);
+                Image::new(texture.id, dimensions.into()).build(ui);
                 // ui.set_cursor_pos([0.0, ui.window_content_region_max()[1]]);
 
                 ui.next_column();

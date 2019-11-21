@@ -33,6 +33,18 @@ impl GuiState {
             let window_width = ui.content_region_max()[0];
             ui.columns(2, im_str!("MainColumns"), true);
             ui.set_column_offset(1, window_width * 2.0 / 3.0);
+            if let (Some(set), Some(background)) = (self.set.as_mut(), self.selected_background) {
+                self.draw_editor(reborrow_frame!(frame), background);
+            } else {
+                let text = match self.set.is_some() {
+                    true => "Select a background from the list on the right to begin editing.",
+                    false => "Open a background set to create and edit desktop backgrounds.",
+                };
+                let size = ui.calc_text_size(&im_str!("{}", text), false, -1.0);
+                ui.center_avail_h(size[0]);
+                ui.center_avail_v(size[1]);
+                ui.text(text);
+            }
             ui.next_column();
             self.draw_background_list(frame);
         });
