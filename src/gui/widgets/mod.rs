@@ -1,8 +1,8 @@
-mod background_card;
-mod background_grid;
-mod image_dropdown;
-mod popup_modal;
-mod croppable_image;
+pub mod background_card;
+pub mod background_grid;
+pub mod image_dropdown;
+pub mod popup_modal;
+pub mod croppable_image;
 
 pub use background_card::{BackgroundCard, CardOriginalInfo};
 pub use background_grid::BackgroundGrid;

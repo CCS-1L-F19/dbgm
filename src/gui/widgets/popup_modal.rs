@@ -4,6 +4,7 @@ use crate::gui::prelude::*;
 
 use imgui::PopupModal;
 
+#[must_use]
 pub struct PopupModal2<'ui, 'p> {
     inner: PopupModal<'ui, 'p>,
     size: Option<Vec2>
@@ -15,7 +16,7 @@ impl<'ui, 'p> PopupModal2<'ui, 'p> {
     }
 
     fn map<T>(self, f: fn(PopupModal<'ui, 'p>, T) -> PopupModal<'ui, 'p>, param: T) -> PopupModal2<'ui, 'p> {
-        PopupModal2{ inner: f(self.inner, param), ..self }
+        PopupModal2 { inner: f(self.inner, param), ..self }
     }
 
     /// Pass a mutable boolean which will be updated to refer to the current

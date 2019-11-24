@@ -2,6 +2,8 @@ use crate::utils::{OptionExt as _, Flatten as _};
 use crate::gui::prelude::*;
 use crate::background::*;
 
+use widgets::croppable_image::*;
+
 const INFO_HEIGHT: f32 = 100.0;
 const CLIPPING_ADJUSTMENT: f32 = 1.0; // The clipping area of a ChildWindow is asymmetrical for some reason.
 
@@ -39,7 +41,9 @@ impl GuiState {
         let size = utils::fit_size(texture.size, avail);
         let offset = (avail - size) / 2.0;
         ui.move_cursor(offset.into());
-        Image::new(texture.id, size.into()).border_col(ui.style_color(StyleColor::Border)).build(ui);
+        let mut crop_region = CropRegion::new_centered(texture.size, texture.size);
+        crop_region.scale *= 0.5;
+        CroppableImage::new(texture, size).build(ui, &mut crop_region);
         ui.move_cursor([0.0, offset.y]);
     }
 

@@ -2,12 +2,12 @@ use std::ptr;
 
 use winapi::um::{objbase, combaseapi};
 
+#[macro_use] mod math;
 mod renderer;
 mod background;
 mod sources;
 mod gui;
 mod utils;
-mod math;
 
 use utils::check_result;
 

@@ -4,6 +4,7 @@ use crate::gui::prelude::*;
 
 use widgets::background_card::*;
 
+#[must_use]
 pub struct BackgroundGrid<'a> {
     pub id: &'a ImStr,
     pub entries: Vec<(usize, Option<CardOriginalInfo>)>,

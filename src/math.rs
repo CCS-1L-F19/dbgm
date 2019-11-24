@@ -94,3 +94,7 @@ impl From<Vec2> for ImVec2 {
         ImVec2 { x: vec.x, y: vec.y }
     }
 }
+
+macro_rules! vec2 {
+    { $x:expr, $y:expr } => { Vec2::from([$x, $y]) }
+}

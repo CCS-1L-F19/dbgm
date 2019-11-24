@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use image::{self, ImageResult, DynamicImage, GenericImageView};
 use crate::{sources::*, utils::{OptionExt as _, MaybeStale}};
+use crate::math::Vec2;
 use bitflags::bitflags;
 use stable_vec::StableVec;
 
@@ -12,6 +13,7 @@ pub struct DesktopBackground {
     pub original: OriginalKey,
     pub size: MaybeStale<(u32, u32)>,
     pub center: MaybeStale<(u32, u32)>,
+    pub scale: f32,
     pub comments: Vec<String>,
     pub flags: DesktopBackgroundFlags,
 }
@@ -29,6 +31,7 @@ impl DesktopBackground {
             original: key,
             size: size.into(),
             center: size.map(|(x, y)| (x / 2, y / 2)).into(),
+            scale: 1.0,
             comments: Vec::new(),
             flags: DesktopBackgroundFlags::UNEDITED,
         }
@@ -66,6 +69,45 @@ bitflags! {
         const ORIGINAL_UNAVAILABLE = 0x4;
         /// This background has been excluded from the set and will be hidden by default.
         const EXCLUDED = 0x8;
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct CropRegion {
+    pub size: Vec2,
+    pub scale: f32,
+    pub center: Vec2,
+}
+
+impl CropRegion {
+    pub fn new_centered(size: Vec2, bounds: Vec2) -> Self {
+        let size_ratio = bounds.scale_inv(size);
+        CropRegion {
+            scale: f32::min(size_ratio.x, size_ratio.y),
+            center: bounds / 2.0,
+            size: size,
+        }
+    }
+
+    fn top_left(&self) -> Vec2 {
+        self.center - (self.size * self.scale / 2.0)
+    }
+
+    fn bottom_right(&self) -> Vec2 {
+        self.center + (self.size * self.scale / 2.0)
+    }
+
+    fn clip(&self, bounds: Vec2) -> CropRegion {
+        let size_ratio = bounds.scale_inv(self.size);
+        let new_scale = f32::min(self.scale, f32::min(size_ratio.x, size_ratio.y));
+        let quarter = self.size * new_scale / 2.0;
+        let center_min = vec2![0.0, 0.0] + quarter;
+        let center_max = bounds - quarter;
+        CropRegion {
+            size: self.size,
+            scale: new_scale,
+            center: Vec2::min(center_max, Vec2::max(center_min, self.center)),
+        }
     }
 }
 

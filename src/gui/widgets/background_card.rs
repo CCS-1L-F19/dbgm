@@ -54,6 +54,7 @@ impl CardOriginalInfo {
     }
 }
 
+#[must_use]
 pub struct BackgroundCard<'i, 'c> {
     pub id: &'i ImStr,
     pub resources: &'c GuiResources,

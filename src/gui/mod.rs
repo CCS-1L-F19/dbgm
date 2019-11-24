@@ -10,7 +10,7 @@ pub mod draw;
 
 mod prelude {
     pub(in super) use imgui::*;
-    pub(in super) use crate::math::Vec2;
+    pub(in super) use crate::math::*;
     pub(in super) use crate::renderer::{Texture, Textures};
     pub(in super) use super::{modals, widgets, utils};
     pub(in super) use super::resources::GuiResources;
