@@ -1,6 +1,5 @@
-use crate::utils::{OptionExt as _, Flatten as _};
+use crate::utils::Flatten as _;
 use crate::gui::prelude::*;
-use crate::background::*;
 
 use widgets::croppable_image::*;
 
@@ -27,7 +26,7 @@ impl GuiState {
     fn draw_image<T: Textures + ?Sized>(&mut self, frame: Frame<T>, background: usize) {
         let Frame { ui, textures, resources } = frame;
         let ActiveSet { set, image_cache } = self.set.as_mut().expect("Cannot edit when no background set is open!");
-        let mut background = &mut set.backgrounds[background];
+        let background = &mut set.backgrounds[background];
         let original = set.sources[background.source].original(&background.original);
         if let Some(original) = original.as_option() {
             if !image_cache.contains_image(&background.original) {
@@ -41,22 +40,22 @@ impl GuiState {
         let size = utils::fit_size(texture.size, avail);
         let offset = (avail - size) / 2.0;
         ui.move_cursor(offset.into());
-        let mut crop_region = CropRegion::new_centered(texture.size, texture.size);
-        crop_region.scale *= 0.5;
-        CroppableImage::new(texture, size).build(ui, &mut crop_region);
+        match background.edit_crop_region(texture.size /* TODO: REPLACE THIS WITH ACTUAL SIZE */) {
+            Ok(crop_region) => CroppableImage::new(texture, size).build(ui, crop_region),
+            Err(_) => unimplemented!()
+        }
         ui.move_cursor([0.0, offset.y]);
     }
 
     fn draw_info<T: Textures + ?Sized>(&mut self, frame: Frame<T>, background: usize) {
-        let Frame { ui, textures, resources } = frame;
+        let ui = &frame.ui;
         let set = self.set.as_mut().expect("Cannot edit when no background set is open!");
         let mut background = &mut set.backgrounds[background];
         let mut buf = ImString::new(&background.name);
-        let header = if !background.flags.contains(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE) {
-            let size = background.size.value().expect("Size should not be missing!");
-            format!("{} - [JPEG Image, {} x {} pixels]", background.name, size.0, size.1)
-        } else {
-            format!("{} - (original unavailable)", background.name)
+        let header = match background.original_meta.last_known_size() {
+            // TODO: Actually detect image type here
+            Some(size) => format!("{} (JPEG Image, {} x {} pixels)", background.name, size.0, size.1),
+            None => format!("{} - (original unavailable)", background.name),
         };
         ui.text(header);
         if ui.input_text(im_str!("Name"), &mut buf).flags(ImGuiInputTextFlags::CallbackResize).build() {

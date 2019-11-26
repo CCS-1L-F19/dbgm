@@ -108,7 +108,7 @@ impl<'i, 'c> BackgroundCard<'i, 'c> {
                 ]);
                 let frame_padding = ui.push_style_var(StyleVar::FramePadding([0.0, 0.0]));
 
-                if flags.contains(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE) {
+                if background.is_unavailable() {
                     Image::new(resources.unavailable.id, ICON_SIZE).build(ui);
                     ui.same_line(0.0);
                 }

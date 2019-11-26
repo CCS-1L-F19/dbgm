@@ -1,5 +1,4 @@
 use crate::background::BackgroundSet;
-
 use crate::gui::prelude::*;
 
 use widgets::background_card::*;

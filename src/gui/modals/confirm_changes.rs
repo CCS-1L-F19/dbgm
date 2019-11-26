@@ -6,7 +6,7 @@ use super::ModalInterface;
 use crate::{
     gui::prelude::*,
     sources::{OriginalKey, CompareKey, KeyRelation, OriginalResult, OriginalChange, ChangeKind},
-    background::{BackgroundSet, DesktopBackground, DesktopBackgroundFlags},
+    background::{DesktopBackground, DesktopBackgroundFlags, BackgroundSet},
 };
 
 use widgets::{BackgroundCard, BackgroundGrid, CardOriginalInfo};
@@ -124,7 +124,7 @@ impl ConfirmChanges {
             },
             (ChangeKind::Unavailable(_), _) => { 
                 for background in set.backgrounds.values_mut().filter(|b| b.original.compare(&key) == KeyRelation::SameOriginal) {
-                    background.flags.insert(DesktopBackgroundFlags::ORIGINAL_UNAVAILABLE);
+                    background.mark_unavailable();
                 }
             },
         }

@@ -1,4 +1,5 @@
 use crate::gui::prelude::*;
+use crate::background::CropRegion;
 
 #[must_use]
 pub struct CroppableImage {
@@ -14,15 +15,15 @@ impl CroppableImage {
         }
     }
 
-    pub fn build(self, ui: &Ui, region: &mut CropRegion) {
+    pub fn build(self, ui: &Ui, mut region: CropRegion) {
         let base = vec2![1.0, 1.0] + ui.cursor_pos() + ui.window_pos();
         Image::new(self.texture.id, self.size.into()).border_col(ui.style_color(StyleColor::Border)).build(ui);
         if ui.is_item_hovered() {
             if ui.is_mouse_down(MouseButton::Left) {
-                region.center = self.window_coord_to_tex(base, ui.io().mouse_pos);
+                *region.center = self.window_coord_to_tex(base, ui.io().mouse_pos);
             }
             println!("{}", ui.io().mouse_wheel);
-            *region = region.clip(self.texture.size);
+            region.clip();
         }
         let top_left = self.tex_coord_to_window(base, region.top_left());
         let bottom_right = self.tex_coord_to_window(base, region.bottom_right());
