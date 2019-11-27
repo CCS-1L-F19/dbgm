@@ -8,7 +8,6 @@ const CLIPPING_ADJUSTMENT: f32 = 1.0; // The clipping area of a ChildWindow is a
 
 struct EditorState {
     selected_background: usize,
-
 }
 
 impl GuiState {
@@ -40,7 +39,7 @@ impl GuiState {
         let size = utils::fit_size(texture.size, avail);
         let offset = (avail - size) / 2.0;
         ui.move_cursor(offset.into());
-        match background.edit_crop_region(texture.size /* TODO: REPLACE THIS WITH ACTUAL SIZE */) {
+        match background.edit_crop_region(vec2![set.resolution.0 as f32, set.resolution.1 as f32]) {
             Ok(crop_region) => CroppableImage::new(texture, size).build(ui, crop_region),
             Err(_) => unimplemented!()
         }
@@ -62,5 +61,8 @@ impl GuiState {
             background.name = buf.to_str().to_owned();
         }
         ui.input_text(im_str!("Location"), &mut ImString::new(&background.location)).read_only(true).build();
+        if ui.button(im_str!("Preview"), AUTO_SIZE) {
+
+        }
     }
 }

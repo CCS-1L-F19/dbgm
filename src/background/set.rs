@@ -1,4 +1,6 @@
 use std::path::{Path, PathBuf};
+use std::fs::File;
+use std::io::BufReader;
 
 use stable_vec::StableVec;
 
@@ -6,21 +8,40 @@ use crate::sources::{DesktopBackgroundSource, ErasedDesktopBackgroundSource};
 use crate::background::DesktopBackground;
 use crate::utils::OptionExt as _;
 
+#[derive(Debug)]
+pub enum SetLoadError {
+    Io(std::io::Error),
+}
+
+impl From<std::io::Error> for SetLoadError {
+    fn from(error: std::io::Error) -> SetLoadError {
+        SetLoadError::Io(error)
+    }
+}
+
 pub struct BackgroundSet {
     image_folder: Option<PathBuf>,
     name: Option<String>,
+    pub(crate) resolution: (usize, usize),
     pub(crate) backgrounds: StableVec<DesktopBackground>,
     pub(crate) sources: StableVec<Box<dyn ErasedDesktopBackgroundSource>>,
 }
 
 impl BackgroundSet {
-    pub fn new() -> BackgroundSet {
+    pub fn new(resolution: (usize, usize)) -> BackgroundSet {
         BackgroundSet {
             image_folder: None,
             name: None,
+            resolution: resolution,
             backgrounds: StableVec::new(),
             sources: StableVec::new(),
         }
+    }
+
+    pub fn load(path: impl AsRef<Path>) -> Result<BackgroundSet, SetLoadError> {
+        let file = File::open(path)?;
+        let reader = BufReader::new(file);
+        unimplemented!()
     }
 
     pub fn image_folder(&self) -> Option<&Path> {

@@ -3,11 +3,12 @@ use std::ptr;
 use winapi::um::{objbase, combaseapi};
 
 #[macro_use] mod math;
+#[macro_use] mod utils;
 mod renderer;
 mod background;
 mod sources;
 mod gui;
-mod utils;
+
 
 use utils::check_result;
 
@@ -18,7 +19,7 @@ fn main() -> Result<(), std::io::Error> {
     let resources = gui::GuiResources::load(&mut renderer.render_sys.textures());
     renderer.main_loop(|run, ui, textures| {
         let frame = gui::draw::Frame { ui, textures, resources: &resources };
-        *run = gui::draw::draw_state(&mut state, frame);
+        *run = *run && gui::draw::draw_state(&mut state, frame);
     });
     unsafe { combaseapi::CoUninitialize(); }
     Ok(())

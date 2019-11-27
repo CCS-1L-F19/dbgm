@@ -6,21 +6,54 @@ pub trait ErasedDesktopBackgroundSource {
     fn name(&self) -> &str;
     fn original(&self, id: &OriginalKey) -> OriginalResult<&dyn Original>;
     fn reload(&mut self) -> Vec<OriginalChange<OriginalKey, Box<dyn Debug>>>;
+    fn assemble_key(&self, value: serde_json::Value) -> OriginalKey;
+}
+
+#[derive(Clone)]
+struct KeyVtable {
+    comparer: Box<fn(&OriginalKey, &OriginalKey) -> KeyRelation>,
+    hasher: Box<fn(&OriginalKey, &mut dyn Hasher)>,
+}
+
+impl KeyVtable {
+    fn of<'a, S: DesktopBackgroundSource<'a>>() -> KeyVtable {
+        KeyVtable {
+            comparer: Box::new(KeyVtable::key_comparer::<S>),
+            hasher: Box::new(KeyVtable::key_hasher::<S>),
+        }
+    }
+
+    fn key_comparer<'a, S: DesktopBackgroundSource<'a>>(k1: &OriginalKey, k2: &OriginalKey) -> KeyRelation {
+        match (serde_json::from_value::<S::Key>(k1.value.clone()), serde_json::from_value::<S::Key>(k2.value.clone())) {
+            (Ok(k1), Ok(k2)) => k1.compare(&k2),
+            _ => KeyRelation::Distinct,
+        }
+    }
+
+    fn key_hasher<'a, S: DesktopBackgroundSource<'a>>(key: &OriginalKey, hasher: &mut dyn Hasher) {
+        struct HashWrapper<'a>(&'a mut dyn Hasher);
+        impl<'a> Hasher for HashWrapper<'a> {
+            fn write(&mut self, bytes: &[u8]) { self.0.write(bytes); }
+            fn finish(&self) -> u64 { self.0.finish() }
+        }
+        
+        let key = serde_json::from_value::<S::Key>(key.value.clone()).expect("Corrupt OriginalKey detected!");
+        key.hash(&mut HashWrapper(hasher));
+    }
 }
 
 #[derive(Clone)]
 pub struct OriginalKey {
     value: serde_json::Value,
-    comparer: Box<fn(&OriginalKey, &OriginalKey) -> KeyRelation>,
-    hasher: Box<fn(&OriginalKey, &mut dyn Hasher)>,
+    vtable: KeyVtable,
 }
 
 impl CompareKey for OriginalKey { 
-    fn compare(&self, other: &Self) -> KeyRelation { (self.comparer)(self, other) } 
+    fn compare(&self, other: &Self) -> KeyRelation { (self.vtable.comparer)(self, other) } 
 }
 
 impl Hash for OriginalKey { 
-    fn hash<H: Hasher>(&self, hasher: &mut H) { (self.hasher)(self, hasher) } 
+    fn hash<H: Hasher>(&self, hasher: &mut H) { (self.vtable.hasher)(self, hasher) } 
 }
 
 impl PartialEq for OriginalKey {
@@ -33,32 +66,13 @@ impl OriginalKey {
     fn new<'a, S: DesktopBackgroundSource<'a>>(key: S::Key) -> OriginalKey {
         OriginalKey {
             value: serde_json::to_value(key).expect("Could not serialize original key to JSON!"),
-            comparer: Box::new(key_comparer::<S>),
-            hasher: Box::new(key_hasher::<S>)
+            vtable: KeyVtable::of::<S>(),
         }
     }
 
     fn try_deserialize<K: serde::de::DeserializeOwned>(&self) -> Option<K> {
         serde_json::from_value(self.value.clone()).ok()
     }
-}
-
-fn key_comparer<'a, S: DesktopBackgroundSource<'a>>(k1: &OriginalKey, k2: &OriginalKey) -> KeyRelation {
-    match (serde_json::from_value::<S::Key>(k1.value.clone()), serde_json::from_value::<S::Key>(k2.value.clone())) {
-        (Ok(k1), Ok(k2)) => k1.compare(&k2),
-        _ => KeyRelation::Distinct,
-    }
-}
-
-struct HashWrapper<'a>(&'a mut dyn Hasher);
-impl<'a> Hasher for HashWrapper<'a> {
-    fn write(&mut self, bytes: &[u8]) { self.0.write(bytes); }
-    fn finish(&self) -> u64 { self.0.finish() }
-}
-
-fn key_hasher<'a, S: DesktopBackgroundSource<'a>>(key: &OriginalKey, hasher: &mut dyn Hasher) {
-    let key = serde_json::from_value::<S::Key>(key.value.clone()).expect("Corrupt OriginalKey detected!");
-    key.hash(&mut HashWrapper(hasher));
 }
 
 impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S {
@@ -81,4 +95,38 @@ impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S
             }
         }).collect()
     }
+
+    fn assemble_key(&self, value: serde_json::Value) -> OriginalKey {
+        OriginalKey { value: value, vtable: KeyVtable::of::<Self>() }
+    }
 }
+
+#[doc(hidden)]
+pub struct SourceLoader(
+    pub &'static str,
+    pub Box<fn(v: serde_json::Value) -> Result<Box<dyn ErasedDesktopBackgroundSource>, serde_json::Error>>
+);
+
+#[derive(Debug)]
+pub enum SourceLoadError {
+    Deserialize(serde_json::Error),
+    IdNotFound,
+}
+
+impl From<serde_json::Error> for SourceLoadError {
+    fn from(err: serde_json::Error) -> SourceLoadError {
+        SourceLoadError::Deserialize(err)
+    }
+}
+
+pub fn load_source_by_id(id: &str, data: serde_json::Value) -> Result<Box<dyn ErasedDesktopBackgroundSource>, SourceLoadError> {
+    for loader in inventory::iter::<SourceLoader> {
+        if loader.0 == id {
+            let source = (loader.1)(data)?;
+            return Ok(source)
+        }
+    }
+    Err(SourceLoadError::IdNotFound)
+}
+
+inventory::collect!(SourceLoader);

@@ -1,9 +1,16 @@
 use std::ops::Deref;
-use winapi::um::winnt;
+use winapi::um::{
+    winnt::HRESULT,
+    winuser::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN}
+};
 
 #[inline]
-pub fn check_result(result: winnt::HRESULT) -> Result<(), std::io::Error> {
+pub fn check_result(result: HRESULT) -> Result<(), std::io::Error> {
     if result < 0 {  Err(std::io::Error::from_raw_os_error(result)) } else { Ok(()) }
+}
+
+pub fn primary_monitor_resolution() -> (usize, usize) {
+    unsafe { (GetSystemMetrics(SM_CXSCREEN) as usize, GetSystemMetrics(SM_CYSCREEN) as usize) }
 }
 
 // Use this until Option::deref stabilizes.
@@ -26,6 +33,16 @@ impl<T> Flatten<T> for Option<Option<T>> {
         match self {
             None => None,
             Some(v) => v,
+        }
+    }
+}
+
+macro_rules! register_source_type {
+    {$id:literal, $source:ty} => {
+        ::inventory::submit! {
+            $crate::sources::SourceLoader($id, Box::new(|v| {
+                serde_json::from_value::<$source>(v).map(|s| Box::new(s))
+            }))
         }
     }
 }

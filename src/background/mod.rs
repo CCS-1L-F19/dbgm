@@ -1,17 +1,21 @@
-use image::{self, ImageResult, DynamicImage, GenericImageView};
 use bitflags::bitflags;
+use image::{self, ImageResult, DynamicImage, GenericImageView};
+use serde::{Serialize, Deserialize};
 
 use crate::math::Vec2;
 use crate::sources::{OriginalKey, CompareKey, KeyRelation};
 
 mod set;
+mod persist;
 pub use set::BackgroundSet;
 
+#[derive(Serialize, Deserialize)]
 struct EditInfo { pub center: Vec2, pub scale: f32 }
 
 pub enum OriginalMeta {
     Known { size: (u32, u32) },
     Unavailable { last_known_size: Option<(u32, u32)> },
+    Stale { last_known_size: Option<(u32, u32)> },
 }
 
 impl OriginalMeta {
@@ -31,6 +35,7 @@ impl OriginalMeta {
 }
 
 bitflags! {
+    #[derive(Serialize, Deserialize)]
     pub struct DesktopBackgroundFlags: u32 {
         /// This background has not been edited since its original last changed.
         const UNEDITED = 0x1;
@@ -46,7 +51,7 @@ bitflags! {
 pub struct DesktopBackground {
     pub name: String,
     pub location: String,
-    pub comments: Vec<String>,
+    pub comments: String,
     pub source: usize,
     pub original: OriginalKey,
     pub flags: DesktopBackgroundFlags,
@@ -60,7 +65,7 @@ impl DesktopBackground {
         DesktopBackground {
             name: original.name(),
             location: original.location(), // TODO: Figure out how this should work
-            comments: Vec::new(),
+            comments: String::new(),
             source: source,
             original: key,
             flags: DesktopBackgroundFlags::UNEDITED,
@@ -146,7 +151,7 @@ impl<'a> CropRegion<'a> {
 
     pub fn clip(&mut self) {
         let size_ratio = self.tex_size.scale_inv(self.crop_size);
-        *self.scale = f32::min(*self.scale, f32::min(size_ratio.x, size_ratio.y));
+        *self.scale = f32::max(0.0, f32::min(*self.scale, f32::min(size_ratio.x, size_ratio.y)));
         let quarter = *self.scale * self.crop_size / 2.0;
         let center_min = vec2![0.0, 0.0] + quarter;
         let center_max = self.tex_size - quarter;

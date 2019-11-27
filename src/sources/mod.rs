@@ -6,7 +6,7 @@ use crate::background::Original;
 mod folder;
 mod erased;
 
-pub use erased::{OriginalKey, ErasedDesktopBackgroundSource};
+pub use erased::{OriginalKey, ErasedDesktopBackgroundSource, load_source_by_id, SourceLoadError};
 pub use folder::FolderSource;
 
 pub trait DesktopBackgroundSource<'a> {

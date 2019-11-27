@@ -1,8 +1,9 @@
 use std::ops::{Add, Sub, Mul, Div};
 
+use serde::{Serialize, Deserialize};
 use imgui::sys::ImVec2;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Vec2 { pub x: f32, pub y: f32 }
 
 impl Vec2 {
@@ -14,6 +15,14 @@ impl Vec2 {
     pub fn scale_inv(self, other: impl Into<Vec2>) -> Vec2 {
         let other = other.into();
         Vec2 { x: self.x / other.x, y: self.y / other.y }
+    }
+
+    pub fn floor(self) -> Vec2 {
+        Vec2 { x: self.x.floor(), y: self.y.floor() }
+    }
+
+    pub fn ceil(self) -> Vec2 {
+        Vec2 { x: self.x.ceil(), y: self.y.ceil() }
     }
 
     pub fn max(v1: impl Into<Vec2>, v2: impl Into<Vec2>) -> Vec2 {

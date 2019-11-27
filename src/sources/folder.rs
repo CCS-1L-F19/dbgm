@@ -147,3 +147,5 @@ impl Original for OriginalFile {
         self.path.to_string_lossy().to_owned().to_string()
     }
 }
+
+register_source_type!("folder", FolderSource);

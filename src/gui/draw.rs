@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use crate::background::BackgroundSet;
 use crate::gui::prelude::*;
+use crate::utils;
 
 use modals::ChangeSetInfo;
 
@@ -54,7 +55,7 @@ impl GuiState {
     fn draw_menu_bar(&mut self, ui: &Ui) {
         ui.menu(im_str!("File"), true, || {
             if MenuItem::new(im_str!("New background set...")).build(ui) {
-                self.open_background_set(BackgroundSet::new());
+                self.open_background_set(BackgroundSet::new(utils::primary_monitor_resolution()));
             }
             if MenuItem::new(im_str!("Open background set...")).build(ui) {
                 // TODO: Implement
