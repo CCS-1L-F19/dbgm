@@ -7,11 +7,13 @@ use std::{
 };
 
 use image::{ImageResult, DynamicImage};
+use serde::{Serialize, Deserialize};
 
 use super::*;
 
 pub const HASH_SIZE: usize = 32;
 
+#[derive(Serialize, Deserialize)]
 pub struct FolderSource {
     folder: PathBuf,
     name: String,
@@ -43,6 +45,8 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
     type Key = FileKey;
     type Error = std::io::Error;
     type Original = OriginalFile;
+
+    const TYPE_IDENT: &'static str = "folder";
 
     fn name(&self) -> &str { &self.name }
 
@@ -112,6 +116,8 @@ impl<'a> DesktopBackgroundSource<'a> for FolderSource {
     }
 }
 
+register_source_type!(FolderSource);
+
 #[derive(Hash, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FileKey {
     filename: OsString,
@@ -128,8 +134,9 @@ impl CompareKey for FileKey {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct OriginalFile {
-    mismatch: bool,
+    mismatch: bool, // TODO: Remove this?
     path: PathBuf,
     hash: [u8; HASH_SIZE],
 }
@@ -147,5 +154,3 @@ impl Original for OriginalFile {
         self.path.to_string_lossy().to_owned().to_string()
     }
 }
-
-register_source_type!("folder", FolderSource);

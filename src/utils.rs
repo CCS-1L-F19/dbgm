@@ -38,10 +38,10 @@ impl<T> Flatten<T> for Option<Option<T>> {
 }
 
 macro_rules! register_source_type {
-    {$id:literal, $source:ty} => {
+    {$source:ty} => {
         ::inventory::submit! {
-            $crate::sources::SourceLoader($id, Box::new(|v| {
-                serde_json::from_value::<$source>(v).map(|s| Box::new(s))
+            $crate::sources::SourceLoader(<$source>::TYPE_IDENT, Box::new(|v| {
+                serde_json::from_value::<$source>(v).map(|s| Box::new(s) as Box<_>)
             }))
         }
     }

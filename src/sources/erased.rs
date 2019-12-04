@@ -1,12 +1,15 @@
 use super::*;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
+use serde::Serialize;
 
-pub trait ErasedDesktopBackgroundSource {
+pub trait ErasedDesktopBackgroundSource: erased_serde::Serialize {
     fn name(&self) -> &str;
     fn original(&self, id: &OriginalKey) -> OriginalResult<&dyn Original>;
     fn reload(&mut self) -> Vec<OriginalChange<OriginalKey, Box<dyn Debug>>>;
     fn assemble_key(&self, value: serde_json::Value) -> OriginalKey;
+    fn source_type_id(&self) -> &'static str;
+    fn as_serialize(&self) -> &dyn erased_serde::Serialize;
 }
 
 #[derive(Clone)]
@@ -46,6 +49,10 @@ impl KeyVtable {
 pub struct OriginalKey {
     value: serde_json::Value,
     vtable: KeyVtable,
+}
+
+impl<'a> Into<serde_json::Value> for &'a OriginalKey {
+    fn into(self) -> serde_json::Value { self.value.clone() }
 }
 
 impl CompareKey for OriginalKey { 
@@ -99,6 +106,12 @@ impl<S: for<'a> DesktopBackgroundSource<'a>> ErasedDesktopBackgroundSource for S
     fn assemble_key(&self, value: serde_json::Value) -> OriginalKey {
         OriginalKey { value: value, vtable: KeyVtable::of::<Self>() }
     }
+
+    fn source_type_id(&self) -> &'static str {
+        Self::TYPE_IDENT
+    }
+
+    fn as_serialize(&self) -> &dyn erased_serde::Serialize { self }
 }
 
 #[doc(hidden)]

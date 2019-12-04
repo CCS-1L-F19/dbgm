@@ -6,13 +6,15 @@ use crate::background::Original;
 mod folder;
 mod erased;
 
-pub use erased::{OriginalKey, ErasedDesktopBackgroundSource, load_source_by_id, SourceLoadError};
+pub use erased::{OriginalKey, ErasedDesktopBackgroundSource, load_source_by_id, SourceLoadError, SourceLoader};
 pub use folder::FolderSource;
 
-pub trait DesktopBackgroundSource<'a> {
+pub trait DesktopBackgroundSource<'a>: erased_serde::Serialize {
     type Key: Hash + Clone + serde::Serialize + serde::de::DeserializeOwned + CompareKey;
     type Original: Original;
     type Error: Debug + 'a;
+
+    const TYPE_IDENT: &'static str;
 
     fn name(&self) -> &str;
     fn original(&self, key: &Self::Key) -> OriginalResult<&Self::Original>;

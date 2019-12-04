@@ -9,7 +9,7 @@ mod set;
 mod persist;
 pub use set::BackgroundSet;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct EditInfo { pub center: Vec2, pub scale: f32 }
 
 pub enum OriginalMeta {
@@ -30,6 +30,7 @@ impl OriginalMeta {
         match self {
             OriginalMeta::Known { size } => Some(*size),
             OriginalMeta::Unavailable { last_known_size } => *last_known_size,
+            OriginalMeta::Stale { last_known_size } => *last_known_size,
         }
     }
 }
@@ -92,7 +93,7 @@ impl DesktopBackground {
     pub fn is_unavailable(&self) -> bool {
         match self.original_meta {
             OriginalMeta::Unavailable { .. } => true,
-            OriginalMeta::Known { .. } => false,
+            _ => false,
         }
     }
 
