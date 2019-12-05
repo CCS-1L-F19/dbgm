@@ -12,6 +12,16 @@ pub use set::{BackgroundSet, SkipReason};
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct EditInfo { pub center: Vec2, pub scale: f32 }
 
+impl EditInfo {
+    fn default_sized(crop_size: impl Into<Vec2>, tex_size: impl Into<Vec2>) -> EditInfo {
+        let (crop_size, tex_size) = (crop_size.into(), tex_size.into());
+        EditInfo {
+            center: tex_size / 2.0 + [0.5, 0.5], 
+            scale: f32::min(tex_size.x / crop_size.x, tex_size.y / crop_size.y),
+        }
+    }
+}
+
 pub enum OriginalMeta {
     Known { size: (u32, u32) },
     Unavailable { last_known_size: Option<(u32, u32)> },
@@ -119,7 +129,7 @@ impl DesktopBackground {
         match self.original_meta {
             OriginalMeta::Known { size } => {
                 let size = vec2![size.0 as f32, size.1 as f32];
-                let edit_info = self.edit_info.get_or_insert_with(|| EditInfo { center: size / 2.0 + [0.5, 0.5], scale: 1.0 });
+                let edit_info = self.edit_info.get_or_insert_with(|| EditInfo::default_sized(crop_size, size));
                 let mut region = EditableCropRegion {
                     crop_size: crop_size,
                     tex_size: size,
@@ -140,7 +150,7 @@ impl DesktopBackground {
             None => match self.original_meta {
                 OriginalMeta::Known { size } => {
                     let size = vec2![size.0 as f32, size.1 as f32];
-                    EditInfo { center: size / 2.0 + [0.5, 0.5], scale: 1.0 }
+                    EditInfo::default_sized(crop_size, size)
                 },
                 _ => return Err(())
             }
