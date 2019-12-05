@@ -1,3 +1,5 @@
+![](screenshot.png)
+
 # dbgm
 `dbgm` is a tool for managing a library of Windows desktop backgrounds. It is currently in alpha status, and only the core functionality is implemented. It supports the ability to import backgrounds from folders on-disk and nondestructively edit these backgrounds to best fit a particular screen resolution. The edited versions are then saved to a folder from which Windows can generate a slideshow.
 
