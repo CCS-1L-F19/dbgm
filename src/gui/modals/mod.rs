@@ -7,19 +7,21 @@ pub mod change_set_info;
 pub mod add_folder_source;
 pub mod confirm_changes;
 pub mod remove_source;
+pub mod rebuild_success;
 
 pub use error::ErrorModal;
 pub use change_set_info::ChangeSetInfo;
 pub use add_folder_source::AddFolderSource;
 pub use confirm_changes::ConfirmChanges;
 pub use remove_source::RemoveSource;
+pub use rebuild_success::RebuildSuccess;
 
 #[enum_dispatch]
 pub trait ModalInterface {
     fn id(&self) -> &str;
     fn title(&self) -> &str;
     fn display<T: Textures + ?Sized>(self, state: &mut GuiState, frame: Frame<T>);
-    fn open_with<'ui, 'p>(&self, ui: &'ui Ui, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
+    fn open_with<'ui, 'p>(&self, _ui: &'ui Ui, modal: PopupModal<'ui, 'p>) -> PopupModal<'ui, 'p> {
         modal.always_auto_resize(true)
     }
 }
@@ -31,6 +33,7 @@ pub enum Modal {
     AddFolderSource,
     ConfirmChanges,
     RemoveSource,
+    RebuildSuccess,
 }
 
 impl GuiState {

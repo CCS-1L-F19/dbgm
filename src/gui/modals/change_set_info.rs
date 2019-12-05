@@ -1,7 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::ModalInterface;
 use crate::gui::prelude::*;
+
+use crate::background::BackgroundSet;
 use crate::utils::OptionExt;
 
 pub struct ChangeSetInfo { image_folder: Option<PathBuf>, name_buf: ImString }
@@ -38,7 +40,10 @@ impl ModalInterface for ChangeSetInfo {
 }
 
 impl ChangeSetInfo {
-    pub fn new() -> ChangeSetInfo {
-        ChangeSetInfo { image_folder: None, name_buf: ImString::new("") }
+    pub fn new(set: &BackgroundSet) -> ChangeSetInfo {
+        ChangeSetInfo { 
+            image_folder: set.image_folder().map(Path::to_owned), 
+            name_buf: ImString::new(set.name().clone().unwrap_or("")),
+        }
     }
 }

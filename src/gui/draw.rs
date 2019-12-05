@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use crate::background::BackgroundSet;
 use crate::gui::prelude::*;
 
-use modals::{ChangeSetInfo, ErrorModal};
+use modals::{ChangeSetInfo, RebuildSuccess, ErrorModal};
 
 pub struct Frame<'f, T: ?Sized> {
     pub ui: &'f Ui<'f>,
@@ -33,7 +33,7 @@ impl GuiState {
             let window_width = ui.content_region_max()[0];
             ui.columns(2, im_str!("MainColumns"), true);
             ui.set_column_offset(1, window_width * 2.0 / 3.0);
-            if let (Some(set), Some(background)) = (self.set.as_mut(), self.selected_background) {
+            if let (true, Some(background)) = (self.set.is_some(), self.selected_background) {
                 self.draw_editor(reborrow_frame!(frame), background);
             } else {
                 let text = match self.set.is_some() {
@@ -80,10 +80,21 @@ impl GuiState {
                     _ => {}
                 }
             }
-            if MenuItem::new(im_str!("Edit set information...")).enabled(self.set.is_some()).build(ui) {
-                self.open_modal(ChangeSetInfo::new())
+        });
+        ui.menu(im_str!("Set"), self.set.is_some(), || {
+            if MenuItem::new(im_str!("Edit set information...")).build(ui) {
+                self.open_modal(ChangeSetInfo::new(self.set.as_ref().unwrap()))
             }
-            if MenuItem::new(im_str!("Show debug window")).build(ui) {
+            let set = self.set.as_mut().unwrap();
+            if MenuItem::new(im_str!("Rebuild image folder")).enabled(set.image_folder().is_some()).build(ui) {
+                match set.rebuild_image_folder() {
+                    Ok(skipped) => self.open_modal(RebuildSuccess::new(skipped)),
+                    Err(e) => self.open_modal(ErrorModal::new("An error occured while rebuilding the image folder.", Some(e))),
+                }
+            }
+        });
+        ui.menu(im_str!("View"), true, || {
+            if MenuItem::new(im_str!("Debug window")).build(ui) {
                 self.debug = !self.debug;
             }
         });

@@ -11,8 +11,7 @@ impl ModalInterface for AddFolderSource {
     fn title(&self) -> &str { "Add source from folder..." }
     fn display<T: Textures + ?Sized>(mut self, state: &mut GuiState, frame: Frame<T>) {
         let Frame { ui, .. } = frame;
-        let set = state.set.as_mut().expect("Cannot add a source when no background set is open!");
-
+        
         let display_folder = self.folder.deref().map(|f| f.to_string_lossy()).unwrap_or("(none)".into());
         ui.input_text(im_str!("Source folder"), &mut ImString::new(display_folder)).read_only(true).build();
         ui.same_line(0.0);

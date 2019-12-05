@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use stable_vec::StableVec;
 
 use crate::sources::{DesktopBackgroundSource, ErasedDesktopBackgroundSource};
-use crate::background::DesktopBackground;
+use crate::background::{DesktopBackground, DesktopBackgroundFlags};
 use crate::utils::OptionExt as _;
 
 pub struct BackgroundSet {
@@ -49,4 +49,63 @@ impl BackgroundSet {
         self.backgrounds.retain(|b| b.source != source);
         self.sources.remove(source);
     }
+
+    /// Rebuilds the image folder from scratch. Returns a list of background IDs that were *not* included.
+    pub fn rebuild_image_folder(&mut self) -> Result<Vec<(usize, SkipReason)>, std::io::Error> {
+        use std::fs;
+        use blake2::{Blake2b, digest::Digest};
+        use image::ImageFormat;
+        
+        let image_folder = self.image_folder.as_ref().expect("Cannot update image folder when none is set!");
+        
+        // Ensure the image folder exists.
+        fs::create_dir_all(image_folder)?;
+
+        // Clear contents of the image folder. If this fails, we abort.
+        for entry in image_folder.read_dir()? {
+            let entry = entry?;
+            if entry.metadata()?.is_file() {
+                fs::remove_file(entry.path())?; 
+            }
+        }
+
+        // Save a file in the folder for each background whose original is accessible.
+        let mut skipped = Vec::new();
+        for (id, background) in self.backgrounds.iter_mut().filter(|(_, b)| !b.flags.contains(DesktopBackgroundFlags::EXCLUDED)) { 
+            if background.flags.contains(DesktopBackgroundFlags::EXCLUDED) {
+                skipped.push((id, SkipReason::Excluded));
+                continue
+            }
+            
+            let original = match self.sources[background.source].original(&background.original).as_option() {
+                Some(original) => original,
+                None => { skipped.push((id, SkipReason::OriginalUnavailable)); continue }
+            };
+
+            let mut image = match background.try_read_image_from(original) {
+                Ok(image) => image,
+                Err(e) => { skipped.push((id, SkipReason::CorruptImage(e))); continue }
+            };
+
+            let resolution = vec2![self.resolution.0 as f32, self.resolution.1 as f32];
+            let crop_region = match background.crop_region(resolution) {
+                Ok(crop_region) => crop_region,
+                Err(_) => { skipped.push((id, SkipReason::OriginalUnavailable)); continue }
+            };
+
+            let cropped = crop_region.crop(&mut image).to_image();
+            let mut hasher = Blake2b::new();
+            hasher.input(&*cropped);
+            let path = image_folder.join(base64::encode_config(&hasher.result(), base64::URL_SAFE) + ".png");
+            cropped.save_with_format(path, ImageFormat::PNG)?;
+        }
+        Ok(skipped)
+    }
+}
+
+#[derive(Debug)]
+pub enum SkipReason {
+    OriginalUnavailable,
+    CorruptImage(image::ImageError),
+    Excluded,
 }

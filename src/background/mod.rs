@@ -7,7 +7,7 @@ use crate::sources::{OriginalKey, CompareKey, KeyRelation};
 
 mod set;
 mod persist;
-pub use set::BackgroundSet;
+pub use set::{BackgroundSet, SkipReason};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct EditInfo { pub center: Vec2, pub scale: f32 }
@@ -115,12 +115,12 @@ impl DesktopBackground {
 
     /// The return value allows the crop region of this background to be edited, so as long as its original is
     /// not unavailable. See `is_unavailable` above.
-    pub fn edit_crop_region(&mut self, crop_size: Vec2) -> Result<CropRegion, ()> {
+    pub fn edit_crop_region(&mut self, crop_size: Vec2) -> Result<EditableCropRegion, ()> {
         match self.original_meta {
             OriginalMeta::Known { size } => {
                 let size = vec2![size.0 as f32, size.1 as f32];
                 let edit_info = self.edit_info.get_or_insert_with(|| EditInfo { center: size / 2.0 + [0.5, 0.5], scale: 1.0 });
-                let mut region = CropRegion {
+                let mut region = EditableCropRegion {
                     crop_size: crop_size,
                     tex_size: size,
                     center: &mut edit_info.center,
@@ -132,16 +132,57 @@ impl DesktopBackground {
             _ => Err(()) // TODO: Add error details
         }
     }
+
+    /// Get the crop region of this background immutably.
+    pub fn crop_region(&self, crop_size: Vec2) -> Result<CropRegion, ()> {
+        let edit_info = match self.edit_info.clone() {
+            Some(edit_info) => edit_info,
+            None => match self.original_meta {
+                OriginalMeta::Known { size } => {
+                    let size = vec2![size.0 as f32, size.1 as f32];
+                    EditInfo { center: size / 2.0 + [0.5, 0.5], scale: 1.0 }
+                },
+                _ => return Err(())
+            }
+        };
+        Ok(CropRegion {
+            crop_size: crop_size,
+            center: edit_info.center,
+            scale: edit_info.scale,
+        })
+    }
 }
 
-pub struct CropRegion<'a> {
+pub struct CropRegion {
+    pub crop_size: Vec2, // The base size of the crop region (will be multiplied by scale)
+    pub center: Vec2,
+    pub scale: f32,
+}
+
+impl CropRegion {
+    pub fn top_left(&self) -> Vec2 {
+        self.center - (self.scale * self.crop_size / 2.0)
+    }
+
+    pub fn bottom_right(&self) -> Vec2 {
+        self.center + (self.scale * self.crop_size / 2.0)
+    }
+
+    pub fn crop<'i, I: image::GenericImageView>(&self, image: &'i mut I) -> image::SubImage<&'i mut I> {
+        let (top_left, bottom_right) = (self.top_left().floor(), self.bottom_right().ceil());
+        let size = bottom_right - top_left;
+        image::imageops::crop(image, top_left.x as u32, top_left.y as u32, size.x as u32, size.y as u32)
+    }
+}
+
+pub struct EditableCropRegion<'a> {
     crop_size: Vec2, // The base size of the crop region (will be multiplied by scale)
     tex_size: Vec2, // The size of the texture being cropped
     pub center: &'a mut Vec2,
     pub scale: &'a mut f32,
 }
 
-impl<'a> CropRegion<'a> {
+impl<'a> EditableCropRegion<'a> {
     pub fn top_left(&self) -> Vec2 {
         *self.center - (*self.scale * self.crop_size / 2.0)
     }

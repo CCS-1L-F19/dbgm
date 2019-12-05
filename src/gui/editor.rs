@@ -6,10 +6,6 @@ use widgets::croppable_image::*;
 const INFO_HEIGHT: f32 = 100.0;
 const CLIPPING_ADJUSTMENT: f32 = 1.0; // The clipping area of a ChildWindow is asymmetrical for some reason.
 
-struct EditorState {
-    selected_background: usize,
-}
-
 impl GuiState {
     pub(super) fn draw_editor<T: Textures + ?Sized>(&mut self, frame: Frame<T>, background: usize) {
         // We make this window one pixel bigger because the clipping region is asymmetric for some reason.

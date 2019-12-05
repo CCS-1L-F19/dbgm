@@ -1,5 +1,5 @@
 use crate::gui::prelude::*;
-use crate::background::CropRegion;
+use crate::background::EditableCropRegion;
 
 #[must_use]
 pub struct CroppableImage {
@@ -15,7 +15,7 @@ impl CroppableImage {
         }
     }
 
-    pub fn build(self, ui: &Ui, mut region: CropRegion) {
+    pub fn build(self, ui: &Ui, mut region: EditableCropRegion) {
         let base = vec2![1.0, 1.0] + ui.cursor_pos() + ui.window_pos();
         Image::new(self.texture.id, self.size.into()).border_col(ui.style_color(StyleColor::Border)).build(ui);
         if ui.is_item_hovered() {
