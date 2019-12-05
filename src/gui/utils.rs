@@ -152,8 +152,8 @@ impl<'a> ChildWindowExt for ChildWindow<'a> {
     }
 }
 
-pub fn choose_folder(desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
-    match nfd::open_pick_folder(None) {
+pub fn nfd_handler(response: nfd::Result<nfd::Response>, desc: &str) -> Result<Option<PathBuf>, ErrorModal> {
+    match response {
         Ok(nfd::Response::Okay(f)) => match f.parse() {
             Ok(path) => Ok(Some(path)),
             Err(e) => return Err(ErrorModal::new(format!("Invalid path to {}.", desc), Some(e))),

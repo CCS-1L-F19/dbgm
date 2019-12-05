@@ -17,7 +17,7 @@ impl ModalInterface for AddFolderSource {
         ui.input_text(im_str!("Source folder"), &mut ImString::new(display_folder)).read_only(true).build();
         ui.same_line(0.0);
         if ui.button(im_str!("Choose..."), AUTO_SIZE) {
-            match utils::choose_folder("source folder") {
+            match utils::nfd_handler(nfd::open_pick_folder(None), "source folder") {
                 Ok(Some(path)) => self.folder = Some(path),
                 Err(modal) => { state.open_modal(modal); return }
                 _ => {},

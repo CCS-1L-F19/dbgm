@@ -5,7 +5,7 @@ use std::io::{BufReader, BufWriter};
 use serde::*;
 use stable_vec::StableVec;
 
-use crate::sources;
+use crate::sources::{self, OriginalResult};
 use crate::background::*;
 
 impl BackgroundSet {
@@ -90,15 +90,24 @@ impl SavedBackgroundSet {
         for saved_source in self.sources {
             match sources::load_source_by_id(&saved_source.ty, saved_source.data.clone()) {
                 Ok(source) => {
-                    backgrounds.extend(saved_source.backgrounds.into_iter().map(|b| DesktopBackground {
-                        original: source.assemble_key(b.key_data),
-                        name: b.name,
-                        location: b.location,
-                        comments: b.comments,
-                        source: sources.num_elements(),
-                        flags: b.flags,
-                        original_meta: OriginalMeta::Stale { last_known_size: b.original_meta.last_known_size },
-                        edit_info: b.edit_info,
+                    backgrounds.extend(saved_source.backgrounds.into_iter().map(|b| {
+                        let key = source.assemble_key(b.key_data);
+                        DesktopBackground {
+                            name: b.name,
+                            location: b.location,
+                            comments: b.comments,
+                            source: sources.num_elements(),
+                            flags: b.flags,
+                            edit_info: b.edit_info,
+                            original_meta: match source.original(&key) {
+                                // TODO: Check if this is right
+                                OriginalResult::Original(original) | OriginalResult::ContentMismatch(original) => OriginalMeta::load(
+                                    original, Some(&OriginalMeta::Stale { last_known_size: b.original_meta.last_known_size })
+                                ),
+                                _ => OriginalMeta::Unavailable { last_known_size: b.original_meta.last_known_size },
+                            },
+                            original: key,
+                        }
                     }));
                     sources.push(source);
                 }

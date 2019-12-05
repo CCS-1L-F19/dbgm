@@ -47,3 +47,23 @@ macro_rules! register_source_type {
     }
 }
 
+pub mod as_pairs {
+    use std::collections::HashMap;
+    use std::hash::Hash;
+    use serde::{Serialize, Serializer, Deserialize, Deserializer};
+
+    pub fn serialize<K, V, S>(map: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error> 
+        where K: Serialize, V: Serialize, S: Serializer
+    {
+        let pairs: Vec<(&K, &V)> = map.iter().collect();
+        Serialize::serialize(&pairs, serializer)
+    }
+
+    pub fn deserialize<'de, K, V, D>(deserializer: D) -> Result<HashMap<K, V>, D::Error> 
+        where K: Deserialize<'de> + Hash + Eq, V: Deserialize<'de>, D: Deserializer<'de>
+    {
+        let pairs: Vec<(K, V)> = Deserialize::deserialize(deserializer)?;
+        Ok(pairs.into_iter().collect())
+    }
+}
+

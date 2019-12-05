@@ -18,7 +18,7 @@ impl ModalInterface for ChangeSetInfo {
         ui.input_text(im_str!("Image folder"), &mut ImString::new(display_folder)).read_only(true).build();
         ui.same_line(0.0);
         if ui.button(im_str!("Choose..."), AUTO_SIZE) {
-            match utils::choose_folder("image folder") {
+            match utils::nfd_handler(nfd::open_pick_folder(None), "image folder") {
                 Ok(Some(path)) => self.image_folder = Some(path),
                 Err(modal) => { state.open_modal(modal); return }
                 _ => {},

@@ -2,9 +2,8 @@ use std::borrow::Cow;
 
 use crate::background::BackgroundSet;
 use crate::gui::prelude::*;
-use crate::utils;
 
-use modals::ChangeSetInfo;
+use modals::{ChangeSetInfo, ErrorModal};
 
 pub struct Frame<'f, T: ?Sized> {
     pub ui: &'f Ui<'f>,
@@ -55,10 +54,31 @@ impl GuiState {
     fn draw_menu_bar(&mut self, ui: &Ui) {
         ui.menu(im_str!("File"), true, || {
             if MenuItem::new(im_str!("New background set...")).build(ui) {
-                self.open_background_set(BackgroundSet::new(utils::primary_monitor_resolution()));
+                self.open_background_set(BackgroundSet::new(crate::utils::primary_monitor_resolution()));
             }
             if MenuItem::new(im_str!("Open background set...")).build(ui) {
-                // TODO: Implement
+                match utils::nfd_handler(nfd::open_file_dialog(Some("bgs"), None), "background set") {
+                    Ok(Some(path)) => match BackgroundSet::load(&path) {
+                        Ok((set, warnings)) => self.open_background_set(set),
+                        Err(e) => {
+                            let msg = format!("The background set at {} could not be loaded.", path.to_string_lossy());
+                            self.open_modal(ErrorModal::new(msg, Some(e)));
+                        }
+                    }
+                    Err(modal) => self.open_modal(modal),
+                    _ => {}
+                }
+            }
+            if MenuItem::new(im_str!("Save background set as...")).enabled(self.set.is_some()).build(ui) {
+                // TODO: Use the last path our set was saved as, if available
+                match utils::nfd_handler(nfd::open_save_dialog(Some("bgs"), None), "save location") { 
+                    Ok(Some(path)) => match self.set.as_ref().unwrap().save(path) {
+                        Ok(_) => { /* TODO: Indicate success somehow? */ },
+                        Err(e) => self.open_modal(ErrorModal::new("An error occured while saving the background set.", Some(e)))
+                    }
+                    Err(modal) => self.open_modal(modal),
+                    _ => {}
+                }
             }
             if MenuItem::new(im_str!("Edit set information...")).enabled(self.set.is_some()).build(ui) {
                 self.open_modal(ChangeSetInfo::new())

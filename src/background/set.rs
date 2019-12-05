@@ -7,8 +7,8 @@ use crate::background::DesktopBackground;
 use crate::utils::OptionExt as _;
 
 pub struct BackgroundSet {
-    pub(in super) image_folder: Option<PathBuf>,
-    pub(in super) name: Option<String>,
+    pub(super) image_folder: Option<PathBuf>,
+    pub(super) name: Option<String>,
     pub(crate) resolution: (usize, usize),
     pub(crate) backgrounds: StableVec<DesktopBackground>,
     pub(crate) sources: StableVec<Box<dyn ErasedDesktopBackgroundSource>>,

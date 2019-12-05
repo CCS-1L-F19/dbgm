@@ -91,5 +91,6 @@ impl GuiState {
     // TODO: Prompt, save current set.
     pub(in super) fn open_background_set(&mut self, set: BackgroundSet) {
         self.set = Some(ActiveSet { set, image_cache: ImageCache::new() });
+        self.selected_background = None;
     }
 }

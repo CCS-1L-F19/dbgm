@@ -17,6 +17,7 @@ pub const HASH_SIZE: usize = 32;
 pub struct FolderSource {
     folder: PathBuf,
     name: String,
+    #[serde(with = "crate::utils::as_pairs")] // OsStrings can't be used as JSON keys, so we save a list of pairs
     originals: HashMap<OsString, OriginalFile>,
 }
 

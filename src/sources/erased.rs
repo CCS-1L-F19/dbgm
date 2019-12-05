@@ -1,7 +1,6 @@
 use super::*;
 use std::fmt::Debug;
 use std::hash::{Hash, Hasher};
-use serde::Serialize;
 
 pub trait ErasedDesktopBackgroundSource: erased_serde::Serialize {
     fn name(&self) -> &str;
